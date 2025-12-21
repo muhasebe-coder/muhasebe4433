@@ -1,0 +1,7 @@
+{
+  "name": "MuhasebePro",
+  "description": "Şirketler için stok, fatura ve cari takibi yapabilen, Yapay Zeka destekli modern web tabanlı ön muhasebe uygulaması.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
