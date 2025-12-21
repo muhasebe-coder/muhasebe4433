@@ -17,20 +17,20 @@ import {
 
 /** --- YARDIMCI SERVİSLER --- **/
 const storage = {
-  get: (key: string, def: any) => {
+  get: (key, def) => {
     try {
       const val = localStorage.getItem('mpro_' + key);
       return val ? JSON.parse(val) : def;
     } catch (e) { return def; }
   },
-  set: (key: string, val: any) => localStorage.setItem('mpro_' + key, JSON.stringify(val)),
-  id: (pre: string) => pre + '-' + Math.random().toString(36).substr(2, 6).toUpperCase()
+  set: (key, val) => localStorage.setItem('mpro_' + key, JSON.stringify(val)),
+  id: (pre) => pre + '-' + Math.random().toString(36).substr(2, 6).toUpperCase()
 };
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /** --- BİLEŞENLER --- **/
-const Modal = ({ isOpen, onClose, title, children, size = "max-w-lg" }: any) => {
+const Modal = ({ isOpen, onClose, title, children, size = "max-w-lg" }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-200">
@@ -45,7 +45,7 @@ const Modal = ({ isOpen, onClose, title, children, size = "max-w-lg" }: any) => 
   );
 };
 
-const Input = ({ label, icon: Icon, ...props }: any) => (
+const Input = ({ label, icon: Icon, ...props }) => (
   <div className="space-y-2">
     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{label}</label>
     <div className="relative group">
@@ -81,7 +81,7 @@ const App = () => {
     storage.set('system_pass', systemPass);
   }, [products, customers, invoices, transactions, proposals, employees, settings, systemPass]);
 
-  const handleLogin = (e: any) => {
+  const handleLogin = (e) => {
     e.preventDefault();
     if (passInput === systemPass) {
       setIsAuth(true);
@@ -157,11 +157,12 @@ const App = () => {
           {activeTab === 'customers' && <CustomersView customers={customers} setCustomers={setCustomers} invoices={invoices} transactions={transactions} setTransactions={setTransactions} />}
           {activeTab === 'invoices' && <InvoicesView invoices={invoices} setInvoices={setInvoices} products={products} setProducts={setProducts} setTransactions={setTransactions} settings={settings} />}
           {activeTab === 'proposals' && <ProposalsView proposals={proposals} setProposals={setProposals} products={products} setProducts={setProducts} setInvoices={setInvoices} setTransactions={setTransactions} />}
+          {/* Fix: Passed transactions and setTransactions to TransactionsView */}
           {activeTab === 'transactions' && <TransactionsView transactions={transactions} setTransactions={setTransactions} />}
           {activeTab === 'personnel' && <PersonnelView employees={employees} setEmployees={setEmployees} setTransactions={setTransactions} />}
+          {/* Fix: Passed products, transactions, and invoices to ReportsView */}
           {activeTab === 'reports' && <ReportsView products={products} transactions={transactions} invoices={invoices} />}
           {activeTab === 'ai' && <AIView products={products} transactions={transactions} settings={settings} />}
-          {/* Fix: Pass missing data states to SettingsView to fix scope errors in the backup functionality. */}
           {activeTab === 'settings' && (
             <SettingsView 
               settings={settings} 
@@ -184,10 +185,10 @@ const App = () => {
 
 /** --- GÖRÜNÜMLER --- **/
 
-const DashboardView = ({ products, transactions, invoices }: any) => {
-  const inc = transactions.filter((t:any) => t.type === 'GELİR').reduce((a:any, b:any) => a + b.amount, 0);
-  const exp = transactions.filter((t:any) => t.type === 'GİDER').reduce((a:any, b:any) => a + b.amount, 0);
-  const crit = products.filter((p:any) => p.stock <= (p.min || 5)).length;
+const DashboardView = ({ products, transactions, invoices }) => {
+  const inc = transactions.filter((t) => t.type === 'GELİR').reduce((a, b) => a + b.amount, 0);
+  const exp = transactions.filter((t) => t.type === 'GİDER').reduce((a, b) => a + b.amount, 0);
+  const crit = products.filter((p) => p.stock <= (p.min || 5)).length;
 
   return (
     <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700">
@@ -202,13 +203,13 @@ const DashboardView = ({ products, transactions, invoices }: any) => {
         <StatItem title="Satışlar" value={`₺${inc.toLocaleString()}`} color="bg-emerald-500" icon={TrendingUp} />
         <StatItem title="Giderler" value={`₺${exp.toLocaleString()}`} color="bg-rose-500" icon={TrendingDown} />
         <StatItem title="Kritik Stok" value={crit} color="bg-orange-500" icon={AlertTriangle} />
-        <StatItem title="Bekleyen Tahsilat" value={invoices.filter((i:any)=>i.status === 'BEKLİYOR').length} color="bg-indigo-500" icon={Clock} />
+        <StatItem title="Bekleyen Tahsilat" value={invoices.filter((i)=>i.status === 'BEKLİYOR').length} color="bg-indigo-500" icon={Clock} />
       </div>
     </div>
   );
 };
 
-const StatItem = ({ title, value, color, icon: Icon }: any) => (
+const StatItem = ({ title, value, color, icon: Icon }) => (
   <div className="bg-white dark:bg-slate-800 p-10 rounded-[45px] shadow-sm border dark:border-slate-700 flex items-center justify-between group">
     <div><p className="text-[10px] font-black text-slate-400 uppercase mb-2">{title}</p><h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{value}</h3></div>
     <div className={`p-6 rounded-[30px] ${color} bg-opacity-10 group-hover:bg-opacity-20 transition-all`}><Icon className={color.replace('bg-', 'text-')} size={32} /></div>
@@ -216,7 +217,7 @@ const StatItem = ({ title, value, color, icon: Icon }: any) => (
 );
 
 /** --- STOK --- **/
-const InventoryView = ({ products, setProducts }: any) => {
+const InventoryView = ({ products, setProducts }) => {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: '', sku: '', cat: 'Genel', stock: 0, price: 0, min: 5 });
 
@@ -239,13 +240,13 @@ const InventoryView = ({ products, setProducts }: any) => {
             <tr><th className="p-10">Ürün Bilgisi</th><th className="p-10 text-center">Kategori</th><th className="p-10 text-center">Mevcut</th><th className="p-10 text-right">Fiyat</th><th className="p-10 text-right">İşlem</th></tr>
           </thead>
           <tbody className="divide-y font-medium">
-            {products.map((p: any) => (
+            {products.map((p) => (
               <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10"><div className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-lg">{p.name}</div><div className="text-[10px] text-slate-400 font-bold mt-1">KOD: {p.sku || p.id}</div></td>
                 <td className="p-10 text-center"><span className="bg-slate-100 dark:bg-slate-700 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">{p.cat}</span></td>
                 <td className="p-10 text-center"><div className={`text-xl font-black ${p.stock <= (p.min || 5) ? 'text-rose-500 animate-pulse' : 'text-emerald-500'}`}>{p.stock} Adet</div></td>
                 <td className="p-10 text-right font-black text-2xl tracking-tighter">₺{Number(p.price).toLocaleString()}</td>
-                <td className="p-10 text-right"><button onClick={() => setProducts(products.filter((x:any)=>x.id !== p.id))} className="p-4 text-slate-300 hover:text-rose-500"><Trash2 size={22}/></button></td>
+                <td className="p-10 text-right"><button onClick={() => setProducts(products.filter((x)=>x.id !== p.id))} className="p-4 text-slate-300 hover:text-rose-500"><Trash2 size={22}/></button></td>
               </tr>
             ))}
           </tbody>
@@ -253,9 +254,14 @@ const InventoryView = ({ products, setProducts }: any) => {
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Stok Kartı">
          <div className="space-y-8">
-            <Input label="Ürün Adı" icon={Package} onChange={(e:any)=>setForm({...form, name: e.target.value})} />
-            <div className="grid grid-cols-2 gap-6"><Input label="Kategori" icon={Filter} onChange={(e:any)=>setForm({...form, cat: e.target.value})} /><Input label="Stok Kodu" icon={FileCode} onChange={(e:any)=>setForm({...form, sku: e.target.value})} /></div>
-            <div className="grid grid-cols-3 gap-6"><Input label="Mevcut Stok" type="number" onChange={(e:any)=>setForm({...form, stock: Number(e.target.value)})} /><Input label="Birim Fiyat" type="number" onChange={(e:any)=>setForm({...form, price: Number(e.target.value)})} /><Input label="Kritik Limit" type="number" onChange={(e:any)=>setForm({...form, min: Number(e.target.value)})} /></div>
+            <Input label="Ürün Adı" icon={Package} onChange={(e)=>setForm({...form, name: e.target.value})} />
+            <div className="grid grid-cols-2 gap-6"><Input label="Kategori" icon={Filter} onChange={(e)=>setForm({...form, cat: e.target.value})} /><Input label="Stok Kodu" icon={FileCode} onChange={(e)=>setForm({...form, sku: e.target.value})} /></div>
+            {/* Fix: Added required icons to stock, price, and limit Inputs */}
+            <div className="grid grid-cols-3 gap-6">
+              <Input label="Mevcut Stok" icon={Package} type="number" onChange={(e)=>setForm({...form, stock: Number(e.target.value)})} />
+              <Input label="Birim Fiyat" icon={DollarSign} type="number" onChange={(e)=>setForm({...form, price: Number(e.target.value)})} />
+              <Input label="Kritik Limit" icon={AlertTriangle} type="number" onChange={(e)=>setForm({...form, min: Number(e.target.value)})} />
+            </div>
             <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-700 mt-4 active:scale-95">Kaydet</button>
          </div>
       </Modal>
@@ -264,14 +270,14 @@ const InventoryView = ({ products, setProducts }: any) => {
 };
 
 /** --- CARİ HESAPLAR --- **/
-const CustomersView = ({ customers, setCustomers, invoices, transactions, setTransactions }: any) => {
+const CustomersView = ({ customers, setCustomers, invoices, transactions, setTransactions }) => {
   const [modal, setModal] = useState(false);
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ name: '', phone: '', city: '', type: 'MÜŞTERİ' });
 
-  const getBalance = (name: string) => {
-    const inv = invoices.filter((i:any) => i.customer === name).reduce((a:any, b:any) => a + b.amount, 0);
-    const pay = transactions.filter((t:any) => t.desc.includes(name)).reduce((a:any, t:any) => a + (t.type === 'GELİR' ? t.amount : -t.amount), 0);
+  const getBalance = (name) => {
+    const inv = invoices.filter((i) => i.customer === name).reduce((a, b) => a + b.amount, 0);
+    const pay = transactions.filter((t) => t.desc.includes(name)).reduce((a, t) => a + (t.type === 'GELİR' ? t.amount : -t.amount), 0);
     return inv - pay;
   };
 
@@ -298,7 +304,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
           <button onClick={() => setModal(true)} className="bg-slate-900 text-white p-5 rounded-[25px] hover:bg-black"><Plus size={28}/></button>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
-           {customers.map((c: any) => {
+           {customers.map((c) => {
              const b = getBalance(c.name);
              return (
                <div key={c.id} onClick={() => setSelected(c)} className={`p-8 border-b cursor-pointer transition-all hover:bg-slate-50 ${selected?.id === c.id ? 'bg-blue-50 border-l-[10px] border-l-blue-600' : ''}`}>
@@ -330,13 +336,13 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
                  <h4 className="font-black text-xs uppercase text-slate-300 border-b pb-6 mb-8 tracking-[0.3em]">Hesap Ekstresi</h4>
                  <div className="space-y-4">
-                    {invoices.filter((i:any)=>i.customer === selected.name).map((inv:any)=>(
+                    {invoices.filter((i)=>i.customer === selected.name).map((inv)=>(
                        <div key={inv.id} className="flex justify-between items-center p-8 bg-slate-50 dark:bg-slate-900/50 rounded-[35px]">
                           <div><div className="text-base font-black dark:text-white uppercase tracking-tight">Satış Faturası <span className="text-blue-500">#{inv.id}</span></div><div className="text-[11px] font-bold text-slate-400 mt-1 uppercase">{inv.date}</div></div>
                           <div className="font-black text-2xl text-rose-500 tracking-tighter">+₺{inv.amount.toLocaleString()}</div>
                        </div>
                     ))}
-                    {transactions.filter((t:any)=>t.desc.includes(selected.name)).map((tx:any)=>(
+                    {transactions.filter((t)=>t.desc.includes(selected.name)).map((tx)=>(
                        <div key={tx.id} className="flex justify-between items-center p-8 bg-emerald-50 dark:bg-emerald-900/20 rounded-[35px]">
                           <div><div className="text-base font-black text-emerald-800 uppercase tracking-tight">Tahsilat / Ödeme</div><div className="text-[11px] font-bold text-emerald-600 mt-1 uppercase">{tx.date}</div></div>
                           <div className="font-black text-2xl text-emerald-600 tracking-tighter">-₺{tx.amount.toLocaleString()}</div>
@@ -346,7 +352,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
               </div>
               <div className="mt-12 grid grid-cols-2 gap-6">
                  <button onClick={handleQuickPayment} className="bg-emerald-500 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl hover:bg-emerald-600 flex items-center justify-center gap-4 text-sm"><ArrowDownLeft size={24}/> Tahsilat Al</button>
-                 <button onClick={() => setCustomers(customers.filter((c:any)=>c.id !== selected.id))} className="bg-red-500 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl hover:bg-red-600 flex items-center justify-center gap-4 text-sm"><Trash2 size={24}/> Kaydı Sil</button>
+                 <button onClick={() => setCustomers(customers.filter((c)=>c.id !== selected.id))} className="bg-red-500 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl hover:bg-red-600 flex items-center justify-center gap-4 text-sm"><Trash2 size={24}/> Kaydı Sil</button>
               </div>
            </div>
          ) : (
@@ -355,9 +361,9 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Cari Hesabı">
          <div className="space-y-8">
-            <Input label="Ünvan / İsim" icon={Users} onChange={(e:any)=>setForm({...form, name: e.target.value})} />
-            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cari Tipi</label><select className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none appearance-none font-bold" onChange={(e:any)=>setForm({...form, type: e.target.value})}><option value="MÜŞTERİ">Müşteri (Alıcı)</option><option value="TEDARİKÇİ">Tedarikçi (Satıcı)</option></select></div>
-            <div className="grid grid-cols-2 gap-6"><Input label="Telefon" icon={Phone} onChange={(e:any)=>setForm({...form, phone: e.target.value})} /><Input label="Şehir" icon={MapPin} onChange={(e:any)=>setForm({...form, city: e.target.value})} /></div>
+            <Input label="Ünvan / İsim" icon={Users} onChange={(e)=>setForm({...form, name: e.target.value})} />
+            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cari Tipi</label><select className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none appearance-none font-bold" onChange={(e)=>setForm({...form, type: e.target.value})}><option value="MÜŞTERİ">Müşteri (Alıcı)</option><option value="TEDARİKÇİ">Tedarikçi (Satıcı)</option></select></div>
+            <div className="grid grid-cols-2 gap-6"><Input label="Telefon" icon={Phone} onChange={(e)=>setForm({...form, phone: e.target.value})} /><Input label="Şehir" icon={MapPin} onChange={(e)=>setForm({...form, city: e.target.value})} /></div>
             <button onClick={save} className="w-full bg-slate-900 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95">Cariyi Kaydet</button>
          </div>
       </Modal>
@@ -366,18 +372,18 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
 };
 
 /** --- FATURALAR --- **/
-const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransactions, settings }: any) => {
+const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransactions, settings }) => {
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState<any>({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' });
+  const [form, setForm] = useState({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' });
   const [selItem, setSelItem] = useState({ pid: '', qty: 1 });
 
   const save = () => {
     if(!form.customer || form.items.length === 0) return;
-    const total = form.items.reduce((a:any,b:any)=>a+b.total, 0);
+    const total = form.items.reduce((a,b)=>a+b.total, 0);
     const id = storage.id('FAT');
     setInvoices([{ ...form, id, amount: total, status: 'ÖDENDİ' }, ...invoices]);
-    setTransactions((prev:any) => [{ id: 'TX-'+id, desc: `Fatura: ${form.customer}`, amount: total, type: 'GELİR', date: form.date, method: form.method }, ...prev]);
-    setProducts(products.map((p:any) => { const line = form.items.find((i:any)=>i.id === p.id); return line ? { ...p, stock: p.stock - line.qty } : p; }));
+    setTransactions((prev) => [{ id: 'TX-'+id, desc: `Fatura: ${form.customer}`, amount: total, type: 'GELİR', date: form.date, method: form.method }, ...prev]);
+    setProducts(products.map((p) => { const line = form.items.find((i)=>i.id === p.id); return line ? { ...p, stock: p.stock - line.qty } : p; }));
     setModal(false);
     setForm({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' });
   };
@@ -394,7 +400,7 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
             <tr><th className="p-10">Fatura No</th><th className="p-10">Müşteri</th><th className="p-10 text-center">Ödeme</th><th className="p-10 text-right">Toplam</th><th className="p-10 text-right">İşlem</th></tr>
           </thead>
           <tbody className="divide-y font-medium">
-            {invoices.map((i: any) => (
+            {invoices.map((i) => (
               <tr key={i.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10 font-black text-indigo-600 text-lg">{i.id}</td>
                 <td className="p-10 font-black text-slate-900 dark:text-white uppercase tracking-tight text-lg">{i.customer}</td>
@@ -408,22 +414,22 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Fatura Oluştur" size="max-w-2xl">
          <div className="space-y-8">
-            <Input label="Müşteri Seçin" icon={Search} onChange={(e:any)=>setForm({...form, customer: e.target.value})} />
+            <Input label="Müşteri Seçin" icon={Search} onChange={(e)=>setForm({...form, customer: e.target.value})} />
             <div className="p-8 bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-dashed">
                <div className="flex gap-4">
-                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={(e:any)=>setSelItem({...selItem, pid: e.target.value})}>
+                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={(e)=>setSelItem({...selItem, pid: e.target.value})}>
                      <option value="">Ürün Seçin...</option>
-                     {products.map((p:any)=><option key={p.id} value={p.id}>{p.name} (₺{p.price})</option>)}
+                     {products.map((p)=><option key={p.id} value={p.id}>{p.name} (₺{p.price})</option>)}
                   </select>
-                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={(e:any)=>setSelItem({...selItem, qty: Number(e.target.value)})} />
+                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={(e)=>setSelItem({...selItem, qty: Number(e.target.value)})} />
                   <button onClick={()=>{
-                    const p = products.find((x:any)=>x.id === selItem.pid);
+                    const p = products.find((x)=>x.id === selItem.pid);
                     if(p) setForm({...form, items: [...form.items, {...p, qty: selItem.qty, total: p.price * selItem.qty}]});
                   }} className="bg-slate-900 text-white p-5 rounded-[25px]"><Plus size={28}/></button>
                </div>
             </div>
-            <div className="space-y-3">{form.items.map((it:any, idx:number)=>(<div key={idx} className="flex justify-between items-center p-6 bg-white border rounded-[30px] font-black uppercase text-sm"><span>{it.name} x{it.qty}</span><span>₺{it.total.toLocaleString()}</span></div>))}</div>
-            <div className="flex justify-between items-center pt-10 border-t-2"><span className="text-[12px] font-black text-slate-400 uppercase tracking-[0.3em]">Genel Toplam</span><span className="text-5xl font-black text-indigo-600 tracking-tighter">₺{form.items.reduce((a:any,b:any)=>a+b.total, 0).toLocaleString()}</span></div>
+            <div className="space-y-3">{form.items.map((it, idx)=>(<div key={idx} className="flex justify-between items-center p-6 bg-white border rounded-[30px] font-black uppercase text-sm"><span>{it.name} x{it.qty}</span><span>₺{it.total.toLocaleString()}</span></div>))}</div>
+            <div className="flex justify-between items-center pt-10 border-t-2"><span className="text-[12px] font-black text-slate-400 uppercase tracking-[0.3em]">Genel Toplam</span><span className="text-5xl font-black text-indigo-600 tracking-tighter">₺{form.items.reduce((a,b)=>a+b.total, 0).toLocaleString()}</span></div>
             <button onClick={save} className="w-full bg-indigo-600 text-white py-7 rounded-[40px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-indigo-700 active:scale-95">Faturayı Kes</button>
          </div>
       </Modal>
@@ -432,29 +438,29 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
 };
 
 /** --- TEKLİFLER --- **/
-const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvoices, setTransactions }: any) => {
+const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvoices, setTransactions }) => {
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState<any>({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR') });
+  const [form, setForm] = useState({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR') });
   const [selItem, setSelItem] = useState({ pid: '', qty: 1 });
 
   const save = () => {
     if(!form.customer || form.items.length === 0) return;
-    const total = form.items.reduce((a:any,b:any)=>a+b.total, 0);
+    const total = form.items.reduce((a,b)=>a+b.total, 0);
     setProposals([{ ...form, id: storage.id('TEK'), amount: total }, ...proposals]);
     setModal(false);
     setForm({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR') });
   };
 
-  const convertToInvoice = (p: any) => {
+  const convertToInvoice = (p) => {
     if(!confirm('Bu teklifi faturaya dönüştürmek istediğinize emin misiniz?')) return;
     const invId = storage.id('FAT');
-    setInvoices((prev: any) => [{ ...p, id: invId, status: 'ÖDENDİ' }, ...prev]);
-    setTransactions((prev: any) => [{ id: 'TX-'+invId, desc: `Teklif: ${p.customer}`, amount: p.amount, type: 'GELİR', date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' }, ...prev]);
-    setProducts((prev: any) => prev.map((prod: any) => {
-       const line = p.items.find((item: any) => item.id === prod.id);
+    setInvoices((prev) => [{ ...p, id: invId, status: 'ÖDENDİ' }, ...prev]);
+    setTransactions((prev) => [{ id: 'TX-'+invId, desc: `Teklif: ${p.customer}`, amount: p.amount, type: 'GELİR', date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' }, ...prev]);
+    setProducts((prev) => prev.map((prod) => {
+       const line = p.items.find((item) => item.id === prod.id);
        return line ? { ...prod, stock: prod.stock - line.qty } : prod;
     }));
-    setProposals((prev: any) => prev.filter((x: any) => x.id !== p.id));
+    setProposals((prev) => prev.filter((x) => x.id !== p.id));
     alert('Faturaya Dönüştürüldü!');
   };
 
@@ -465,7 +471,7 @@ const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvo
         <button onClick={() => setModal(true)} className="bg-indigo-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl active:scale-95"><Plus size={24}/> Teklif Oluştur</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {proposals.map((p: any) => (
+        {proposals.map((p) => (
            <div key={p.id} className="bg-white dark:bg-slate-800 p-10 rounded-[45px] shadow-sm border-t-8 border-t-indigo-500">
               <div className="flex justify-between mb-6">
                  <div><h4 className="font-black text-2xl dark:text-white uppercase tracking-tight">{p.customer}</h4><p className="text-xs text-slate-400 font-bold">{p.date}</p></div>
@@ -474,28 +480,28 @@ const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvo
               <div className="text-4xl font-black text-slate-900 dark:text-white mb-8 tracking-tighter">₺{Number(p.amount).toLocaleString()}</div>
               <div className="flex gap-4">
                  <button onClick={() => convertToInvoice(p)} className="flex-1 bg-indigo-600 text-white py-4 rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 active:scale-95">Faturaya Dönüştür</button>
-                 <button onClick={() => setProposals(proposals.filter((x:any)=>x.id !== p.id))} className="p-4 bg-slate-100 text-slate-400 rounded-[20px] hover:text-red-500"><Trash2 size={20}/></button>
+                 <button onClick={() => setProposals(proposals.filter((x)=>x.id !== p.id))} className="p-4 bg-slate-100 text-slate-400 rounded-[20px] hover:text-red-500"><Trash2 size={20}/></button>
               </div>
            </div>
         ))}
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Fiyat Teklifi">
          <div className="space-y-8">
-            <Input label="Müşteri / Cari" icon={Users} onChange={(e:any)=>setForm({...form, customer: e.target.value})} />
+            <Input label="Müşteri / Cari" icon={Users} onChange={(e)=>setForm({...form, customer: e.target.value})} />
             <div className="p-8 bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-dashed">
                <div className="flex gap-4">
-                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={(e:any)=>setSelItem({...selItem, pid: e.target.value})}>
+                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={(e)=>setSelItem({...selItem, pid: e.target.value})}>
                      <option value="">Ürün Seçin...</option>
-                     {products.map((p:any)=><option key={p.id} value={p.id}>{p.name} (₺{p.price})</option>)}
+                     {products.map((p)=><option key={p.id} value={p.id}>{p.name} (₺{p.price})</option>)}
                   </select>
-                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={(e:any)=>setSelItem({...selItem, qty: Number(e.target.value)})} />
+                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={(e)=>setSelItem({...selItem, qty: Number(e.target.value)})} />
                   <button onClick={()=>{
-                    const p = products.find((x:any)=>x.id === selItem.pid);
+                    const p = products.find((x)=>x.id === selItem.pid);
                     if(p) setForm({...form, items: [...form.items, {...p, qty: selItem.qty, total: p.price * selItem.qty}]});
                   }} className="bg-slate-900 text-white p-5 rounded-[25px]"><Plus size={28}/></button>
                </div>
             </div>
-            <div className="space-y-3">{form.items.map((it:any, idx:number)=>(<div key={idx} className="flex justify-between items-center p-6 bg-white border rounded-[30px] font-black uppercase text-sm"><span>{it.name} x{it.qty}</span><span>₺{it.total.toLocaleString()}</span></div>))}</div>
+            <div className="space-y-3">{form.items.map((it, idx)=>(<div key={idx} className="flex justify-between items-center p-6 bg-white border rounded-[30px] font-black uppercase text-sm"><span>{it.name} x{it.qty}</span><span>₺{it.total.toLocaleString()}</span></div>))}</div>
             <button onClick={save} className="w-full bg-indigo-600 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl active:scale-95">Teklifi Kaydet</button>
          </div>
       </Modal>
@@ -504,7 +510,7 @@ const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvo
 };
 
 /** --- PERSONEL --- **/
-const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
+const PersonnelView = ({ employees, setEmployees, setTransactions }) => {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: '', pos: '', sal: 0 });
 
@@ -515,9 +521,9 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
     setForm({ name: '', pos: '', sal: 0 });
   };
 
-  const paySalary = (e: any) => {
+  const paySalary = (e) => {
     if(!confirm(`${e.name} için maaş ödemesini onaylıyor musunuz?`)) return;
-    setTransactions((prev:any) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş: ${e.name}`, amount: Number(e.sal), type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
+    setTransactions((prev) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş: ${e.name}`, amount: Number(e.sal), type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
     alert('Maaş Ödendi!');
   };
 
@@ -525,25 +531,25 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
     <div className="space-y-10">
       <div className="flex justify-between items-center">
         <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Personel</h1>
-        <button onClick={() => setModal(true)} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl"><Plus size={24}/> Personel Ekle</button>
+        <button onClick={() => setModal(true)} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl hover:bg-blue-700"><Plus size={24}/> Personel Ekle</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-         {employees.map((e: any) => (
+         {employees.map((e) => (
             <div key={e.id} className="bg-white dark:bg-slate-800 p-10 rounded-[50px] shadow-sm border group text-center">
                <div className="w-24 h-24 bg-slate-100 rounded-3xl flex items-center justify-center font-black text-4xl text-slate-300 mx-auto mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all">{e.name[0]}</div>
                <h4 className="font-black text-2xl dark:text-white uppercase tracking-tight">{e.name}</h4>
                <p className="text-[10px] font-black text-slate-400 uppercase mt-2">{e.pos}</p>
                <div className="mt-8 pt-8 border-t"><p className="text-[9px] font-black text-slate-300 uppercase mb-2">Aylık Maaş</p><p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">₺{Number(e.sal).toLocaleString()}</p></div>
                <button onClick={() => paySalary(e)} className="w-full mt-8 bg-emerald-500/10 text-emerald-600 py-5 rounded-[25px] font-black text-xs uppercase hover:bg-emerald-500 hover:text-white transition-all">Maaş Öde</button>
-               <button onClick={() => setEmployees(employees.filter((x:any)=>x.id !== e.id))} className="mt-4 text-xs text-slate-300 font-bold hover:text-red-500">Personeli Çıkar</button>
+               <button onClick={() => setEmployees(employees.filter((x)=>x.id !== e.id))} className="mt-4 text-xs text-slate-300 font-bold hover:text-red-500">Personeli Çıkar</button>
             </div>
          ))}
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Personel Kaydı">
          <div className="space-y-8">
-            <Input label="Ad Soyad" icon={Users} onChange={(e:any)=>setForm({...form, name: e.target.value})} />
-            <Input label="Pozisyon" icon={Briefcase} onChange={(e:any)=>setForm({...form, pos: e.target.value})} />
-            <Input label="Maaş (₺)" type="number" icon={DollarSign} onChange={(e:any)=>setForm({...form, sal: Number(e.target.value)})} />
+            <Input label="Ad Soyad" icon={Users} onChange={(e)=>setForm({...form, name: e.target.value})} />
+            <Input label="Pozisyon" icon={Briefcase} onChange={(e)=>setForm({...form, pos: e.target.value})} />
+            <Input label="Maaş (₺)" type="number" icon={DollarSign} onChange={(e)=>setForm({...form, sal: Number(e.target.value)})} />
             <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95">Personeli Kaydet</button>
          </div>
       </Modal>
@@ -552,24 +558,22 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
 };
 
 /** --- AYARLAR --- **/
-// Fix: Added missing props to SettingsView to enable full data backup functionality.
-const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, products, customers, invoices, transactions, employees, proposals }: any) => {
+const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, products, customers, invoices, transactions, employees, proposals }) => {
   const [form, setForm] = useState(settings);
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef(null);
 
-  const handleLogoUpload = (e: any) => {
+  const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if(file) {
       const reader = new FileReader();
-      reader.onloadend = () => { setForm({...form, logo: reader.result as string}); };
+      reader.onloadend = () => { setForm({...form, logo: reader.result}); };
       reader.readAsDataURL(file);
     }
   };
 
   const save = () => {
-    // Şifre değiştirme kontrolü
     if(newPass.trim().length > 0) {
       if(oldPass !== systemPass) {
         alert("Hata: Mevcut şifreniz yanlış!");
@@ -602,23 +606,22 @@ const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, produc
                    {form.logo ? <img src={form.logo} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-slate-300"/>}
                 </div>
                 <input type="file" ref={fileRef} onChange={handleLogoUpload} className="hidden" accept="image/*" />
-                <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600"><Upload size={14}/> Firma Logosunu Değiştir</button>
+                <button onClick={() => fileRef.current.click()} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600"><Upload size={14}/> Firma Logosunu Değiştir</button>
              </div>
-             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={(e:any)=>setForm({...form, title: e.target.value})} />
-             <Input label="VKN / TCKN" icon={FileCode} value={form.vkn} onChange={(e:any)=>setForm({...form, vkn: e.target.value})} />
+             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} />
+             <Input label="VKN / TCKN" icon={FileCode} value={form.vkn} onChange={(e)=>setForm({...form, vkn: e.target.value})} />
           </div>
           <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
              <h4 className="text-[11px] font-black text-orange-600 uppercase tracking-[0.4em] border-b pb-6 flex items-center gap-2"><ShieldCheck size={16}/> Güvenlik Ayarları</h4>
              <div className="p-8 bg-orange-50 dark:bg-orange-900/10 rounded-[35px] border border-orange-100">
                 <p className="text-xs text-orange-700 font-bold mb-6">Şifrenizi güncellemek için önce mevcut şifreyi girin.</p>
                 <div className="space-y-4">
-                  <Input label="MEVCUT ŞİFRE" type="password" icon={Lock} value={oldPass} onChange={(e:any)=>setOldPass(e.target.value)} />
-                  <Input label="YENİ GİRİŞ ŞİFRESİ" type="password" icon={Lock} value={newPass} placeholder="En az 6 hane" onChange={(e:any)=>setNewPass(e.target.value)} />
+                  <Input label="MEVCUT ŞİFRE" type="password" icon={Lock} value={oldPass} onChange={(e)=>setOldPass(e.target.value)} />
+                  <Input label="YENİ GİRİŞ ŞİFRESİ" type="password" icon={Lock} value={newPass} placeholder="En az 6 hane" onChange={(e)=>setNewPass(e.target.value)} />
                 </div>
              </div>
              <div className="pt-10 border-t grid grid-cols-2 gap-6">
                 <button onClick={()=>{
-                  // Fix: All required data states are now passed as props and available for backup.
                   const blob = new Blob([JSON.stringify({products, customers, invoices, transactions, employees, proposals, settings}, null, 2)], {type:'application/json'});
                   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'yedek.json'; a.click();
                 }} className="flex flex-col items-center justify-center gap-3 p-8 bg-slate-900 text-white rounded-[40px] hover:bg-black active:scale-95"><HardDrive size={24}/><span className="text-[10px] font-black uppercase">Veri Yedekle</span></button>
@@ -632,7 +635,8 @@ const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, produc
 };
 
 /** --- DİĞER MODÜLLER --- **/
-const TransactionsView = ({ transactions }: any) => (
+/* Fix: Added setTransactions to the props destructuring */
+const TransactionsView = ({ transactions, setTransactions }) => (
   <div className="space-y-10">
     <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Kasa Hareketleri</h1>
     <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border overflow-hidden">
@@ -641,7 +645,7 @@ const TransactionsView = ({ transactions }: any) => (
           <tr><th className="p-10">Tarih</th><th className="p-10">Açıklama</th><th className="p-10 text-center">Yöntem</th><th className="p-10 text-right">Tutar</th></tr>
         </thead>
         <tbody className="divide-y font-medium">
-          {transactions.map((t:any) => (
+          {transactions.map((t) => (
             <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
               <td className="p-10 text-slate-400 font-bold">{t.date}</td>
               <td className="p-10 font-black dark:text-white uppercase text-base">{t.desc}</td>
@@ -655,10 +659,11 @@ const TransactionsView = ({ transactions }: any) => (
   </div>
 );
 
-const ReportsView = ({ products }: any) => {
+/* Fix: Added transactions and invoices to the props destructuring */
+const ReportsView = ({ products, transactions, invoices }) => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6'];
-  const catData = products.reduce((acc:any, p:any)=>{
-    const ex = acc.find((x:any)=>x.name === p.cat);
+  const catData = products.reduce((acc, p)=>{
+    const ex = acc.find((x)=>x.name === p.cat);
     if(ex) ex.value += p.stock; else acc.push({name:p.cat, value:p.stock});
     return acc;
   }, []);
@@ -668,18 +673,18 @@ const ReportsView = ({ products }: any) => {
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border h-[550px]">
              <h3 className="font-black text-xs uppercase text-slate-300 mb-12">Kategori Dağılımı</h3>
-             <ResponsiveContainer width="100%" height="80%"><RePieChart><Pie data={catData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={10} dataKey="value">{catData.map((_:any, i:number)=><Cell key={i} fill={COLORS[i % COLORS.length]} strokeWidth={0} />)}</Pie><Tooltip /><Legend /></RePieChart></ResponsiveContainer>
+             <ResponsiveContainer width="100%" height="80%"><RePieChart><Pie data={catData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={10} dataKey="value">{catData.map((_, i)=><Cell key={i} fill={COLORS[i % COLORS.length]} strokeWidth={0} />)}</Pie><Tooltip /><Legend /></RePieChart></ResponsiveContainer>
           </div>
           <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-8">
              <h3 className="font-black text-xs uppercase text-slate-300 mb-12">Ticari Performans</h3>
-             <div className="p-10 bg-slate-50 dark:bg-slate-900 rounded-[40px] flex justify-between items-center"><span className="font-black text-slate-400 uppercase text-xs">Toplam Stok Değeri</span><span className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter">₺{products.reduce((a:any,b:any)=>a+(b.price*b.stock), 0).toLocaleString()}</span></div>
+             <div className="p-10 bg-slate-50 dark:bg-slate-900 rounded-[40px] flex justify-between items-center"><span className="font-black text-slate-400 uppercase text-xs">Toplam Stok Değeri</span><span className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter">₺{products.reduce((a,b)=>a+(b.price*b.stock), 0).toLocaleString()}</span></div>
           </div>
        </div>
     </div>
   );
 };
 
-const AIView = ({ products, transactions, settings }: any) => {
+const AIView = ({ products, transactions, settings }) => {
   const [msg, setMsg] = useState("");
   const [chat, setChat] = useState([{r:'ai', t:`Merhaba Mustafa Bey, ${settings.title} verileri anlık olarak sistemimde yüklü. Neyi analiz etmemi istersiniz?`}]);
   const [load, setLoad] = useState(false);
@@ -687,7 +692,7 @@ const AIView = ({ products, transactions, settings }: any) => {
     if(!msg.trim()) return;
     const ut = msg; setMsg(""); setChat(c => [...c, {r:'user', t:ut}]); setLoad(true);
     try {
-      const context = `Şirket: ${settings.title}, Stok: ${products.length} kalem, Kasa: ${transactions.reduce((a:any, b:any)=>a+(b.type==='GELİR'?b.amount:-b.amount), 0)} TL`;
+      const context = `Şirket: ${settings.title}, Stok: ${products.length} kalem, Kasa: ${transactions.reduce((a, b)=>a+(b.type==='GELİR'?b.amount:-b.amount), 0)} TL`;
       const resp = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: `Sen uzman bir CFO'sun. Mustafa Ticaret için şu veriler ışığında profesyonel, kısa ve net yanıt ver: ${context}. Kullanıcı sorusu: ${ut}` });
       setChat(c => [...c, {r:'ai', t:resp.text || "Hata oluştu."}]);
     } catch { setChat(c => [...c, {r:'ai', t: "Bağlantı hatası."}]); }
@@ -704,5 +709,5 @@ const AIView = ({ products, transactions, settings }: any) => {
   );
 };
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
