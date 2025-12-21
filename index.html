@@ -3,41 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Mustafa Ticaret - Ön Muhasebe</title>
-    
+    <title>Mustafa Ticaret - Profesyonel Muhasebe</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
     <script>
-      // Tarayıcıda 'process is not defined' hatasını engellemek için zorunlu shim
       window.process = { env: { API_KEY: "" } };
-      window.global = window;
     </script>
-
     <style>
-      body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; padding: 0; overflow: hidden; }
-      #root { height: 100vh; width: 100vw; }
-      .loader-container {
-        height: 100vh; width: 100vw; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; background: #0f172a; color: white;
-      }
-      .spinner {
-        width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
-        border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
-      }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      #error-box {
-        position: fixed; bottom: 20px; left: 20px; right: 20px;
-        background: #991b1b; color: white; padding: 20px; border-radius: 12px;
-        font-size: 13px; display: none; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
-      }
+      body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; padding: 0; }
       .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+      @media print { .no-print { display: none !important; } }
     </style>
-
     <script type="importmap">
 {
   "imports": {
@@ -56,50 +34,7 @@
 </script>
   </head>
   <body>
-    <div id="root">
-        <div class="loader-container">
-            <div class="spinner"></div>
-            <div style="font-weight: bold; letter-spacing: 2px; font-size: 14px;">MUSTAFA TİCARET</div>
-            <div id="status-text" style="margin-top: 10px; opacity: 0.5; font-size: 11px;">Sistem Yükleniyor...</div>
-        </div>
-    </div>
-    
-    <div id="error-box"></div>
-
-    <script type="text/javascript">
-      (async () => {
-        const statusEl = document.getElementById('status-text');
-        const errorBox = document.getElementById('error-box');
-
-        try {
-          statusEl.innerText = "Kodlar Okunuyor...";
-          const response = await fetch('./index.tsx?v=' + Date.now());
-          if (!response.ok) throw new Error("Dosya sunucudan alınamadı. Lütfen 1 dakika bekleyip yenileyin.");
-          
-          const code = await response.text();
-          statusEl.innerText = "Derleme Yapılıyor...";
-
-          const transformed = Babel.transform(code, {
-            presets: [
-              ['react', { runtime: 'automatic' }],
-              ['typescript', { isTSX: true, allExtensions: true }]
-            ],
-            filename: 'index.tsx'
-          }).code;
-
-          statusEl.innerText = "Başlatılıyor...";
-          const script = document.createElement('script');
-          script.type = 'module';
-          script.textContent = transformed;
-          document.body.appendChild(script);
-
-        } catch (err) {
-          console.error(err);
-          statusEl.innerText = "Hata Oluştu";
-          errorBox.style.display = 'block';
-          errorBox.innerHTML = `<strong>YÜKLEME HATASI:</strong><br>${err.message}`;
-        }
-      })();
-    </script>
+    <div id="root"></div>
+    <script type="text/babel" data-type="module" src="index.tsx"></script>
   </body>
 </html>
