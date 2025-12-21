@@ -48,17 +48,29 @@
         bottom: 20px;
         left: 20px;
         right: 20px;
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-        color: #fca5a5;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 11px;
+        background: rgba(239, 68, 68, 0.95);
+        border: 1px solid #ef4444;
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        font-size: 13px;
         font-family: monospace;
         display: none;
-        z-index: 100;
-        max-height: 200px;
+        z-index: 1000;
+        max-height: 300px;
         overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      }
+      .retry-btn {
+        margin-top: 15px;
+        background: white;
+        color: #ef4444;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        display: inline-block;
+        border: none;
       }
     </style>
 
@@ -84,36 +96,48 @@
         <div class="loader-container">
             <div class="spinner"></div>
             <div style="font-weight: bold; letter-spacing: 2px; font-size: 14px; text-transform: uppercase;">MUSTAFA TİCARET</div>
-            <div id="status-text" style="margin-top: 10px; opacity: 0.5; font-size: 11px;">Sistem Başlatılıyor...</div>
+            <div id="status-text" style="margin-top: 10px; opacity: 0.5; font-size: 11px;">Sistem Hazırlanıyor...</div>
         </div>
     </div>
     
-    <div id="error-log"></div>
+    <div id="error-log">
+        <div id="error-content"></div>
+        <button class="retry-btn" onclick="window.location.reload()">Sayfayı Yenile</button>
+    </div>
 
     <script type="text/javascript">
       (async () => {
         const statusEl = document.getElementById('status-text');
         const errorEl = document.getElementById('error-log');
+        const errorContent = document.getElementById('error-content');
 
         try {
-          statusEl.innerText = "Modüller Yükleniyor...";
-          // index.tsx dosyasını metin olarak çekiyoruz (MIME hatasını baypas etmek için)
-          const response = await fetch('index.tsx');
+          statusEl.innerText = "Dosyalar Okunuyor...";
+          
+          // 'index.tsx' dosyasını explicit bir relative path ile çekiyoruz.
+          // Önbellek sorunlarını önlemek için timestamp ekliyoruz.
+          const fetchUrl = './index.tsx?v=' + Date.now();
+          const response = await fetch(fetchUrl);
           
           if (!response.ok) {
-            throw new Error(`Dosya okunamadı: ${response.status}. Lütfen 'Save to GitHub' butonuna bastığınızdan emin olun.`);
+            throw new Error(`Dosya bulunamadı: ${response.status}. Lütfen 'Save' işleminin tamamlandığından emin olun.`);
           }
           
           const code = await response.text();
-          statusEl.innerText = "Sistem Hazırlanıyor...";
+          statusEl.innerText = "Modüller Derleniyor...";
 
-          // Babel ile anlık dönüştürme
+          // Babel ile TSX kodunu tarayıcının anlayacağı JS'ye çeviriyoruz
           const transformed = Babel.transform(code, {
-            presets: ['react', 'typescript'],
+            presets: [
+              ['react', { runtime: 'automatic' }],
+              ['typescript', { isTSX: true, allExtensions: true }]
+            ],
             filename: 'index.tsx'
           }).code;
 
-          // Dönüştürülen kodu güvenli bir modül olarak çalıştırıyoruz
+          statusEl.innerText = "Uygulama Başlatılıyor...";
+          
+          // Dönüştürülen kodu bir modül olarak sayfaya enjekte ediyoruz
           const script = document.createElement('script');
           script.type = 'module';
           script.textContent = transformed;
@@ -121,9 +145,15 @@
 
         } catch (err) {
           console.error("Yükleme Hatası:", err);
-          statusEl.innerText = "Başlatma Başarısız!";
+          statusEl.innerText = "Başlatma Başarısız";
           errorEl.style.display = 'block';
-          errorEl.innerText = "SİSTEM HATASI: " + err.message + "\n\nİpucu: Eğer yeni yüklediyseniz 1-2 dakika bekleyip sayfayı yenileyin.";
+          
+          let friendlyMessage = err.message;
+          if (err.message === 'Failed to fetch') {
+            friendlyMessage = "Dosya sunucudan alınamadı. İnternet bağlantınızı kontrol edin veya GitHub'ın yeni dosyaları yayınlaması için 1 dakika bekleyip sayfayı yenileyin.";
+          }
+          
+          errorContent.innerHTML = `<strong>SİSTEM HATASI</strong><br><br>${friendlyMessage}<br><br><small>URL: ${window.location.href}</small>`;
         }
       })();
     </script>
