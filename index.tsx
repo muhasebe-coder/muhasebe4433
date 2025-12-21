@@ -2,12 +2,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { 
-  LayoutDashboard, Package, FileText, Wallet, Bot, Users, 
+  LayoutDashboard, Package, FileText, Wallet, Bot, Users, User,
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, ArrowRight, Plus, 
   Trash2, Edit, X, Printer, LogOut, Clock, CheckCircle2, FileSignature,
   Briefcase, PieChart, Search, Filter, ArrowUpRight, ArrowDownLeft, FileCode,
   Calendar, CreditCard, Banknote, Scroll, Zap, HardDrive, Download, Settings,
-  ShieldCheck, ChevronRight, Menu, Phone, MapPin, Lock, Save, RefreshCw, Upload, Image as ImageIcon
+  ShieldCheck, ChevronRight, Menu, Phone, MapPin, Lock, Save, RefreshCw, Upload, Image as ImageIcon, Building2
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { 
@@ -17,7 +17,12 @@ import {
 
 /** --- YARDIMCI SERVİSLER --- **/
 const storage = {
-  get: (key: string, def: any) => JSON.parse(localStorage.getItem('mpro_' + key) || JSON.stringify(def)),
+  get: (key: string, def: any) => {
+    try {
+      const val = localStorage.getItem('mpro_' + key);
+      return val ? JSON.parse(val) : def;
+    } catch (e) { return def; }
+  },
   set: (key: string, val: any) => localStorage.setItem('mpro_' + key, JSON.stringify(val)),
   id: (pre: string) => pre + '-' + Math.random().toString(36).substr(2, 6).toUpperCase()
 };
@@ -89,7 +94,7 @@ const App = () => {
   if (!isAuth) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
-        <form onSubmit={handleLogin} className="bg-white p-12 rounded-[50px] shadow-2xl w-full max-w-md text-center animate-in zoom-in duration-500">
+        <form onSubmit={handleLogin} className="bg-white p-12 rounded-[50px] shadow-2xl w-full max-w-md text-center">
           <div className="w-28 h-28 mx-auto mb-8 overflow-hidden rounded-3xl bg-slate-100 flex items-center justify-center shadow-xl">
              {settings.logo ? (
                <img src={settings.logo} className="w-full h-full object-cover" />
@@ -100,7 +105,7 @@ const App = () => {
           <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tighter">{settings.title}</h1>
           <p className="text-slate-400 mb-10 font-bold text-xs uppercase tracking-widest">Yönetici Girişi</p>
           <div className="space-y-6">
-            <input type="password" placeholder="•••••" className="w-full bg-slate-100 p-6 rounded-3xl text-center text-3xl tracking-[0.5em] outline-none focus:ring-8 ring-blue-500/10 border-2 border-transparent focus:border-blue-500 transition-all font-black" autoFocus value={passInput} onChange={e => setPassInput(e.target.value)} />
+            <input type="password" placeholder="••••••" className="w-full bg-slate-100 p-6 rounded-3xl text-center text-3xl tracking-[0.5em] outline-none focus:ring-8 ring-blue-500/10 border-2 border-transparent focus:border-blue-500 transition-all font-black" autoFocus value={passInput} onChange={e => setPassInput(e.target.value)} />
             <button className="w-full bg-slate-900 text-white py-6 rounded-[30px] font-black text-xl hover:bg-black transition-all flex items-center justify-center gap-3 active:scale-95 shadow-2xl">Sistemi Aç <ArrowRight size={24} /></button>
           </div>
         </form>
@@ -123,7 +128,6 @@ const App = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
-      {/* Sidebar */}
       <aside className="w-80 bg-slate-950 text-white hidden lg:flex flex-col border-r border-slate-800 shadow-2xl">
         <div className="p-10 border-b border-slate-900 flex items-center gap-5">
           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-xl">
@@ -136,7 +140,7 @@ const App = () => {
         </div>
         <nav className="flex-1 p-8 space-y-2 overflow-y-auto custom-scrollbar">
           {menu.map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-5 px-8 py-5 rounded-[25px] transition-all font-black text-sm ${activeTab === item.id ? 'bg-blue-600 text-white shadow-2xl' : 'text-slate-500 hover:bg-slate-900 hover:text-white'}`}>
+            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-5 px-8 py-5 rounded-[25px] transition-all font-black text-sm ${activeTab === item.id ? 'bg-blue-600 text-white shadow-2xl shadow-blue-500/30' : 'text-slate-500 hover:bg-slate-900 hover:text-white'}`}>
               <item.icon size={22}/> {item.label}
             </button>
           ))}
@@ -157,7 +161,21 @@ const App = () => {
           {activeTab === 'personnel' && <PersonnelView employees={employees} setEmployees={setEmployees} setTransactions={setTransactions} />}
           {activeTab === 'reports' && <ReportsView products={products} transactions={transactions} invoices={invoices} />}
           {activeTab === 'ai' && <AIView products={products} transactions={transactions} settings={settings} />}
-          {activeTab === 'settings' && <SettingsView settings={settings} setSettings={setSettings} systemPass={systemPass} setSystemPass={setSystemPass} />}
+          {/* Fix: Pass missing data states to SettingsView to fix scope errors in the backup functionality. */}
+          {activeTab === 'settings' && (
+            <SettingsView 
+              settings={settings} 
+              setSettings={setSettings} 
+              systemPass={systemPass} 
+              setSystemPass={setSystemPass} 
+              products={products}
+              customers={customers}
+              invoices={invoices}
+              transactions={transactions}
+              employees={employees}
+              proposals={proposals}
+            />
+          )}
         </div>
       </main>
     </div>
@@ -169,7 +187,7 @@ const App = () => {
 const DashboardView = ({ products, transactions, invoices }: any) => {
   const inc = transactions.filter((t:any) => t.type === 'GELİR').reduce((a:any, b:any) => a + b.amount, 0);
   const exp = transactions.filter((t:any) => t.type === 'GİDER').reduce((a:any, b:any) => a + b.amount, 0);
-  const crit = products.filter((p:any) => p.stock <= p.min).length;
+  const crit = products.filter((p:any) => p.stock <= (p.min || 5)).length;
 
   return (
     <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700">
@@ -184,7 +202,7 @@ const DashboardView = ({ products, transactions, invoices }: any) => {
         <StatItem title="Satışlar" value={`₺${inc.toLocaleString()}`} color="bg-emerald-500" icon={TrendingUp} />
         <StatItem title="Giderler" value={`₺${exp.toLocaleString()}`} color="bg-rose-500" icon={TrendingDown} />
         <StatItem title="Kritik Stok" value={crit} color="bg-orange-500" icon={AlertTriangle} />
-        <StatItem title="Bekleyen Vade" value={invoices.filter((i:any)=>i.status === 'BEKLİYOR').length} color="bg-indigo-500" icon={Clock} />
+        <StatItem title="Bekleyen Tahsilat" value={invoices.filter((i:any)=>i.status === 'BEKLİYOR').length} color="bg-indigo-500" icon={Clock} />
       </div>
     </div>
   );
@@ -204,7 +222,7 @@ const InventoryView = ({ products, setProducts }: any) => {
 
   const save = () => {
     if(!form.name) return;
-    setProducts([...products, { ...form, id: storage.id('STK') }]);
+    setProducts([{ ...form, id: storage.id('STK') }, ...products]);
     setModal(false);
     setForm({ name: '', sku: '', cat: 'Genel', stock: 0, price: 0, min: 5 });
   };
@@ -213,7 +231,7 @@ const InventoryView = ({ products, setProducts }: any) => {
     <div className="space-y-10">
       <div className="flex justify-between items-center">
         <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Stok Takibi</h1>
-        <button onClick={() => setModal(true)} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl hover:bg-blue-700 active:scale-95"><Plus size={24}/> Ürün Ekle</button>
+        <button onClick={() => setModal(true)} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl hover:bg-blue-700"><Plus size={24}/> Ürün Ekle</button>
       </div>
       <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border overflow-hidden">
         <table className="w-full text-left">
@@ -225,9 +243,9 @@ const InventoryView = ({ products, setProducts }: any) => {
               <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10"><div className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-lg">{p.name}</div><div className="text-[10px] text-slate-400 font-bold mt-1">KOD: {p.sku || p.id}</div></td>
                 <td className="p-10 text-center"><span className="bg-slate-100 dark:bg-slate-700 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">{p.cat}</span></td>
-                <td className="p-10 text-center"><div className={`text-xl font-black ${p.stock <= p.min ? 'text-rose-500 animate-pulse' : 'text-emerald-500'}`}>{p.stock} Adet</div></td>
-                <td className="p-10 text-right font-black text-2xl tracking-tighter">₺{p.price.toLocaleString()}</td>
-                <td className="p-10 text-right"><button onClick={() => setProducts(products.filter((x:any)=>x.id !== p.id))} className="p-4 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-[20px] transition-all"><Trash2 size={22}/></button></td>
+                <td className="p-10 text-center"><div className={`text-xl font-black ${p.stock <= (p.min || 5) ? 'text-rose-500 animate-pulse' : 'text-emerald-500'}`}>{p.stock} Adet</div></td>
+                <td className="p-10 text-right font-black text-2xl tracking-tighter">₺{Number(p.price).toLocaleString()}</td>
+                <td className="p-10 text-right"><button onClick={() => setProducts(products.filter((x:any)=>x.id !== p.id))} className="p-4 text-slate-300 hover:text-rose-500"><Trash2 size={22}/></button></td>
               </tr>
             ))}
           </tbody>
@@ -235,10 +253,10 @@ const InventoryView = ({ products, setProducts }: any) => {
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Stok Kartı">
          <div className="space-y-8">
-            <Input label="Ürün Adı" icon={Package} onChange={e=>setForm({...form, name: e.target.value})} />
-            <div className="grid grid-cols-2 gap-6"><Input label="Kategori" icon={Filter} onChange={e=>setForm({...form, cat: e.target.value})} /><Input label="Stok Kodu" icon={FileCode} onChange={e=>setForm({...form, sku: e.target.value})} /></div>
-            <div className="grid grid-cols-3 gap-6"><Input label="Mevcut Stok" type="number" onChange={e=>setForm({...form, stock: Number(e.target.value)})} /><Input label="Birim Fiyat" type="number" onChange={e=>setForm({...form, price: Number(e.target.value)})} /><Input label="Kritik Limit" type="number" onChange={e=>setForm({...form, min: Number(e.target.value)})} /></div>
-            <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-700 transition-all mt-4 active:scale-95">Kaydet</button>
+            <Input label="Ürün Adı" icon={Package} onChange={(e:any)=>setForm({...form, name: e.target.value})} />
+            <div className="grid grid-cols-2 gap-6"><Input label="Kategori" icon={Filter} onChange={(e:any)=>setForm({...form, cat: e.target.value})} /><Input label="Stok Kodu" icon={FileCode} onChange={(e:any)=>setForm({...form, sku: e.target.value})} /></div>
+            <div className="grid grid-cols-3 gap-6"><Input label="Mevcut Stok" type="number" onChange={(e:any)=>setForm({...form, stock: Number(e.target.value)})} /><Input label="Birim Fiyat" type="number" onChange={(e:any)=>setForm({...form, price: Number(e.target.value)})} /><Input label="Kritik Limit" type="number" onChange={(e:any)=>setForm({...form, min: Number(e.target.value)})} /></div>
+            <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-700 mt-4 active:scale-95">Kaydet</button>
          </div>
       </Modal>
     </div>
@@ -251,33 +269,43 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
   const [selected, setSelected] = useState<any>(null);
   const [form, setForm] = useState({ name: '', phone: '', city: '', type: 'MÜŞTERİ' });
 
-  // Fix: changed t.type to b.type in the reduce callback
   const getBalance = (name: string) => {
     const inv = invoices.filter((i:any) => i.customer === name).reduce((a:any, b:any) => a + b.amount, 0);
-    const pay = transactions.filter((t:any) => t.desc.includes(name)).reduce((a:any, b:any) => a + (b.type === 'GELİR' ? b.amount : -b.amount), 0);
+    const pay = transactions.filter((t:any) => t.desc.includes(name)).reduce((a:any, t:any) => a + (t.type === 'GELİR' ? t.amount : -t.amount), 0);
     return inv - pay;
   };
 
   const save = () => {
     if(!form.name) return;
-    setCustomers([...customers, { ...form, id: storage.id('CARI') }]);
+    setCustomers([{ ...form, id: storage.id('CARI') }, ...customers]);
     setModal(false);
   };
 
+  const handleQuickPayment = () => {
+     if(!selected) return;
+     const amount = prompt(`${selected.name} için alınacak tahsilat tutarını girin:`);
+     if(!amount || isNaN(Number(amount))) return;
+     const val = Number(amount);
+     setTransactions([{ id: 'TX-'+Date.now(), desc: `Tahsilat: ${selected.name}`, amount: val, type: 'GELİR', date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' }, ...transactions]);
+     alert('Tahsilat başarıyla işlendi.');
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 animate-in slide-in-from-bottom-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
       <div className="lg:col-span-1 space-y-10">
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-black uppercase tracking-tighter dark:text-white">Cariler</h1>
-          <button onClick={() => setModal(true)} className="bg-slate-900 text-white p-5 rounded-[25px] hover:bg-black shadow-xl"><Plus size={28}/></button>
+          <button onClick={() => setModal(true)} className="bg-slate-900 text-white p-5 rounded-[25px] hover:bg-black"><Plus size={28}/></button>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
            {customers.map((c: any) => {
              const b = getBalance(c.name);
              return (
-               <div key={c.id} onClick={() => setSelected(c)} className={`p-8 border-b cursor-pointer transition-all hover:bg-slate-50 flex items-center justify-between ${selected?.id === c.id ? 'bg-blue-50 border-l-[10px] border-l-blue-600' : ''}`}>
-                  <div><div className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-base">{c.name}</div><div className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-widest">{c.type}</div></div>
-                  <div className={`font-black text-right ${b > 0 ? 'text-rose-500' : 'text-emerald-500'}`}><div className="text-lg tracking-tighter">₺{Math.abs(b).toLocaleString()}</div></div>
+               <div key={c.id} onClick={() => setSelected(c)} className={`p-8 border-b cursor-pointer transition-all hover:bg-slate-50 ${selected?.id === c.id ? 'bg-blue-50 border-l-[10px] border-l-blue-600' : ''}`}>
+                  <div className="flex justify-between items-center">
+                    <div><div className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-base">{c.name}</div><div className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-widest">{c.type}</div></div>
+                    <div className={`font-black text-right ${b > 0 ? 'text-rose-500' : 'text-emerald-500'}`}><div className="text-lg tracking-tighter">₺{Math.abs(b).toLocaleString()}</div></div>
+                  </div>
                </div>
              );
            })}
@@ -294,7 +322,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
                        <span className="flex items-center gap-2"><MapPin size={18} className="text-rose-500"/> {selected.city || 'Adres Yok'}</span>
                     </div>
                  </div>
-                 <div className={`p-10 rounded-[40px] text-right shadow-xl ${getBalance(selected.name) > 0 ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+                 <div className={`p-10 rounded-[40px] text-right shadow-xl ${getBalance(selected.name) > 0 ? 'bg-rose-50 border-rose-100 border' : 'bg-emerald-50 border-emerald-100 border'}`}>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Net Bakiye</p>
                     <div className={`text-4xl font-black tracking-tighter ${getBalance(selected.name) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₺{Math.abs(getBalance(selected.name)).toLocaleString()}</div>
                  </div>
@@ -317,8 +345,8 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
                  </div>
               </div>
               <div className="mt-12 grid grid-cols-2 gap-6">
-                 <button onClick={() => alert('Tahsilat işlemi faturadan yapılmaktadır.')} className="bg-emerald-500 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl hover:bg-emerald-600 transition-all active:scale-95 flex items-center justify-center gap-4 text-sm"><ArrowDownLeft size={24}/> Tahsilat Al</button>
-                 <button onClick={() => setCustomers(customers.filter((c:any)=>c.id !== selected.id))} className="bg-red-500 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl hover:bg-red-600 transition-all active:scale-95 flex items-center justify-center gap-4 text-sm"><Trash2 size={24}/> Kaydı Sil</button>
+                 <button onClick={handleQuickPayment} className="bg-emerald-500 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl hover:bg-emerald-600 flex items-center justify-center gap-4 text-sm"><ArrowDownLeft size={24}/> Tahsilat Al</button>
+                 <button onClick={() => setCustomers(customers.filter((c:any)=>c.id !== selected.id))} className="bg-red-500 text-white py-6 rounded-[30px] font-black uppercase shadow-2xl hover:bg-red-600 flex items-center justify-center gap-4 text-sm"><Trash2 size={24}/> Kaydı Sil</button>
               </div>
            </div>
          ) : (
@@ -327,10 +355,9 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Cari Hesabı">
          <div className="space-y-8">
-            {/* Fix: changed icon={User} to icon={Users} */}
-            <Input label="Ünvan / İsim" icon={Users} onChange={e=>setForm({...form, name: e.target.value})} />
-            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cari Tipi</label><select className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none appearance-none font-bold" onChange={e=>setForm({...form, type: e.target.value})}><option value="MÜŞTERİ">Müşteri (Alıcı)</option><option value="TEDARİKÇİ">Tedarikçi (Satıcı)</option></select></div>
-            <div className="grid grid-cols-2 gap-6"><Input label="Telefon" icon={Phone} onChange={e=>setForm({...form, phone: e.target.value})} /><Input label="Şehir" icon={MapPin} onChange={e=>setForm({...form, city: e.target.value})} /></div>
+            <Input label="Ünvan / İsim" icon={Users} onChange={(e:any)=>setForm({...form, name: e.target.value})} />
+            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cari Tipi</label><select className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none appearance-none font-bold" onChange={(e:any)=>setForm({...form, type: e.target.value})}><option value="MÜŞTERİ">Müşteri (Alıcı)</option><option value="TEDARİKÇİ">Tedarikçi (Satıcı)</option></select></div>
+            <div className="grid grid-cols-2 gap-6"><Input label="Telefon" icon={Phone} onChange={(e:any)=>setForm({...form, phone: e.target.value})} /><Input label="Şehir" icon={MapPin} onChange={(e:any)=>setForm({...form, city: e.target.value})} /></div>
             <button onClick={save} className="w-full bg-slate-900 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95">Cariyi Kaydet</button>
          </div>
       </Modal>
@@ -341,7 +368,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
 /** --- FATURALAR --- **/
 const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransactions, settings }: any) => {
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState<any>({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT', maturity: '' });
+  const [form, setForm] = useState<any>({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' });
   const [selItem, setSelItem] = useState({ pid: '', qty: 1 });
 
   const save = () => {
@@ -352,18 +379,18 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
     setTransactions((prev:any) => [{ id: 'TX-'+id, desc: `Fatura: ${form.customer}`, amount: total, type: 'GELİR', date: form.date, method: form.method }, ...prev]);
     setProducts(products.map((p:any) => { const line = form.items.find((i:any)=>i.id === p.id); return line ? { ...p, stock: p.stock - line.qty } : p; }));
     setModal(false);
-    setForm({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT', maturity: '' });
+    setForm({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' });
   };
 
   return (
-    <div className="space-y-10 animate-in slide-in-from-bottom-8">
+    <div className="space-y-10">
       <div className="flex justify-between items-center">
         <h1 className="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Faturalar</h1>
-        <button onClick={() => setModal(true)} className="bg-indigo-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl active:scale-95"><Plus size={24}/> Fatura Kes</button>
+        <button onClick={() => setModal(true)} className="bg-indigo-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl"><Plus size={24}/> Fatura Kes</button>
       </div>
       <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black uppercase tracking-[0.3em] border-b">
+          <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black uppercase border-b">
             <tr><th className="p-10">Fatura No</th><th className="p-10">Müşteri</th><th className="p-10 text-center">Ödeme</th><th className="p-10 text-right">Toplam</th><th className="p-10 text-right">İşlem</th></tr>
           </thead>
           <tbody className="divide-y font-medium">
@@ -373,7 +400,7 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
                 <td className="p-10 font-black text-slate-900 dark:text-white uppercase tracking-tight text-lg">{i.customer}</td>
                 <td className="p-10 text-center"><span className="bg-indigo-50 text-indigo-600 px-5 py-2 rounded-2xl text-[10px] font-black uppercase">{i.method}</span></td>
                 <td className="p-10 text-right font-black text-2xl tracking-tighter">₺{i.amount.toLocaleString()}</td>
-                <td className="p-10 text-right"><button onClick={()=>window.print()} className="p-4 text-slate-300 hover:text-blue-500 bg-slate-100 rounded-2xl transition-all"><Printer size={22}/></button></td>
+                <td className="p-10 text-right"><button onClick={()=>window.print()} className="p-4 text-slate-300 hover:text-blue-500"><Printer size={22}/></button></td>
               </tr>
             ))}
           </tbody>
@@ -381,14 +408,14 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Fatura Oluştur" size="max-w-2xl">
          <div className="space-y-8">
-            <Input label="Müşteri Seçin" icon={Search} onChange={e=>setForm({...form, customer: e.target.value})} />
+            <Input label="Müşteri Seçin" icon={Search} onChange={(e:any)=>setForm({...form, customer: e.target.value})} />
             <div className="p-8 bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-dashed">
                <div className="flex gap-4">
-                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={e=>setSelItem({...selItem, pid: e.target.value})}>
+                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={(e:any)=>setSelItem({...selItem, pid: e.target.value})}>
                      <option value="">Ürün Seçin...</option>
                      {products.map((p:any)=><option key={p.id} value={p.id}>{p.name} (₺{p.price})</option>)}
                   </select>
-                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={e=>setSelItem({...selItem, qty: Number(e.target.value)})} />
+                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={(e:any)=>setSelItem({...selItem, qty: Number(e.target.value)})} />
                   <button onClick={()=>{
                     const p = products.find((x:any)=>x.id === selItem.pid);
                     if(p) setForm({...form, items: [...form.items, {...p, qty: selItem.qty, total: p.price * selItem.qty}]});
@@ -407,7 +434,7 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
 /** --- TEKLİFLER --- **/
 const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvoices, setTransactions }: any) => {
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState<any>({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), status: 'TASLAK' });
+  const [form, setForm] = useState<any>({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR') });
   const [selItem, setSelItem] = useState({ pid: '', qty: 1 });
 
   const save = () => {
@@ -415,14 +442,14 @@ const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvo
     const total = form.items.reduce((a:any,b:any)=>a+b.total, 0);
     setProposals([{ ...form, id: storage.id('TEK'), amount: total }, ...proposals]);
     setModal(false);
-    setForm({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR'), status: 'TASLAK' });
+    setForm({ customer: '', items: [], date: new Date().toLocaleDateString('tr-TR') });
   };
 
   const convertToInvoice = (p: any) => {
-    if(!confirm('Bu teklifi faturaya dönüştürmek istediğinize emin misiniz? Stoklar düşülecek ve faturalara eklenecektir.')) return;
+    if(!confirm('Bu teklifi faturaya dönüştürmek istediğinize emin misiniz?')) return;
     const invId = storage.id('FAT');
     setInvoices((prev: any) => [{ ...p, id: invId, status: 'ÖDENDİ' }, ...prev]);
-    setTransactions((prev: any) => [{ id: 'TX-'+invId, desc: `Tekliften Fatura: ${p.customer}`, amount: p.amount, type: 'GELİR', date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' }, ...prev]);
+    setTransactions((prev: any) => [{ id: 'TX-'+invId, desc: `Teklif: ${p.customer}`, amount: p.amount, type: 'GELİR', date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' }, ...prev]);
     setProducts((prev: any) => prev.map((prod: any) => {
        const line = p.items.find((item: any) => item.id === prod.id);
        return line ? { ...prod, stock: prod.stock - line.qty } : prod;
@@ -432,7 +459,7 @@ const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvo
   };
 
   return (
-    <div className="space-y-10 animate-in slide-in-from-bottom-8">
+    <div className="space-y-10">
       <div className="flex justify-between items-center">
         <h1 className="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Fiyat Teklifleri</h1>
         <button onClick={() => setModal(true)} className="bg-indigo-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl active:scale-95"><Plus size={24}/> Teklif Oluştur</button>
@@ -444,24 +471,24 @@ const ProposalsView = ({ proposals, setProposals, products, setProducts, setInvo
                  <div><h4 className="font-black text-2xl dark:text-white uppercase tracking-tight">{p.customer}</h4><p className="text-xs text-slate-400 font-bold">{p.date}</p></div>
                  <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full">{p.id}</span>
               </div>
-              <div className="text-4xl font-black text-slate-900 dark:text-white mb-8 tracking-tighter">₺{p.amount.toLocaleString()}</div>
+              <div className="text-4xl font-black text-slate-900 dark:text-white mb-8 tracking-tighter">₺{Number(p.amount).toLocaleString()}</div>
               <div className="flex gap-4">
-                 <button onClick={() => convertToInvoice(p)} className="flex-1 bg-indigo-600 text-white py-4 rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95">Faturaya Dönüştür</button>
-                 <button onClick={() => setProposals(proposals.filter((x:any)=>x.id !== p.id))} className="p-4 bg-slate-100 text-slate-400 rounded-[20px] hover:text-red-500 transition-all"><Trash2 size={20}/></button>
+                 <button onClick={() => convertToInvoice(p)} className="flex-1 bg-indigo-600 text-white py-4 rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 active:scale-95">Faturaya Dönüştür</button>
+                 <button onClick={() => setProposals(proposals.filter((x:any)=>x.id !== p.id))} className="p-4 bg-slate-100 text-slate-400 rounded-[20px] hover:text-red-500"><Trash2 size={20}/></button>
               </div>
            </div>
         ))}
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Yeni Fiyat Teklifi">
          <div className="space-y-8">
-            <Input label="Müşteri / Cari" icon={Users} onChange={e=>setForm({...form, customer: e.target.value})} />
+            <Input label="Müşteri / Cari" icon={Users} onChange={(e:any)=>setForm({...form, customer: e.target.value})} />
             <div className="p-8 bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-dashed">
                <div className="flex gap-4">
-                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={e=>setSelItem({...selItem, pid: e.target.value})}>
+                  <select className="flex-1 p-5 bg-white rounded-[25px] outline-none font-black text-sm" onChange={(e:any)=>setSelItem({...selItem, pid: e.target.value})}>
                      <option value="">Ürün Seçin...</option>
                      {products.map((p:any)=><option key={p.id} value={p.id}>{p.name} (₺{p.price})</option>)}
                   </select>
-                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={e=>setSelItem({...selItem, qty: Number(e.target.value)})} />
+                  <input type="number" className="w-24 p-5 bg-white rounded-[25px] font-black text-center" value={selItem.qty} onChange={(e:any)=>setSelItem({...selItem, qty: Number(e.target.value)})} />
                   <button onClick={()=>{
                     const p = products.find((x:any)=>x.id === selItem.pid);
                     if(p) setForm({...form, items: [...form.items, {...p, qty: selItem.qty, total: p.price * selItem.qty}]});
@@ -482,23 +509,23 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
   const [form, setForm] = useState({ name: '', pos: '', sal: 0 });
 
   const save = () => {
-    if(!form.name || form.sal === 0) return;
-    setEmployees([...employees, { ...form, id: storage.id('EMP') }]);
+    if(!form.name || !form.sal) return;
+    setEmployees([{ ...form, id: storage.id('EMP') }, ...employees]);
     setModal(false);
     setForm({ name: '', pos: '', sal: 0 });
   };
 
   const paySalary = (e: any) => {
     if(!confirm(`${e.name} için maaş ödemesini onaylıyor musunuz?`)) return;
-    setTransactions((prev:any) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş: ${e.name}`, amount: e.sal, type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
+    setTransactions((prev:any) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş: ${e.name}`, amount: Number(e.sal), type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
     alert('Maaş Ödendi!');
   };
 
   return (
-    <div className="space-y-10 animate-in slide-in-from-bottom-8">
+    <div className="space-y-10">
       <div className="flex justify-between items-center">
         <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Personel</h1>
-        <button onClick={() => setModal(true)} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl hover:bg-blue-700 active:scale-95"><Plus size={24}/> Personel Ekle</button>
+        <button onClick={() => setModal(true)} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl"><Plus size={24}/> Personel Ekle</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
          {employees.map((e: any) => (
@@ -506,7 +533,7 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
                <div className="w-24 h-24 bg-slate-100 rounded-3xl flex items-center justify-center font-black text-4xl text-slate-300 mx-auto mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all">{e.name[0]}</div>
                <h4 className="font-black text-2xl dark:text-white uppercase tracking-tight">{e.name}</h4>
                <p className="text-[10px] font-black text-slate-400 uppercase mt-2">{e.pos}</p>
-               <div className="mt-8 pt-8 border-t"><p className="text-[9px] font-black text-slate-300 uppercase mb-2">Aylık Maaş</p><p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">₺{e.sal.toLocaleString()}</p></div>
+               <div className="mt-8 pt-8 border-t"><p className="text-[9px] font-black text-slate-300 uppercase mb-2">Aylık Maaş</p><p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">₺{Number(e.sal).toLocaleString()}</p></div>
                <button onClick={() => paySalary(e)} className="w-full mt-8 bg-emerald-500/10 text-emerald-600 py-5 rounded-[25px] font-black text-xs uppercase hover:bg-emerald-500 hover:text-white transition-all">Maaş Öde</button>
                <button onClick={() => setEmployees(employees.filter((x:any)=>x.id !== e.id))} className="mt-4 text-xs text-slate-300 font-bold hover:text-red-500">Personeli Çıkar</button>
             </div>
@@ -514,9 +541,9 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
       </div>
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Personel Kaydı">
          <div className="space-y-8">
-            <Input label="Ad Soyad" icon={Users} onChange={e=>setForm({...form, name: e.target.value})} />
-            <Input label="Pozisyon" icon={Briefcase} onChange={e=>setForm({...form, pos: e.target.value})} />
-            <Input label="Maaş (₺)" type="number" icon={DollarSign} onChange={e=>setForm({...form, sal: Number(e.target.value)})} />
+            <Input label="Ad Soyad" icon={Users} onChange={(e:any)=>setForm({...form, name: e.target.value})} />
+            <Input label="Pozisyon" icon={Briefcase} onChange={(e:any)=>setForm({...form, pos: e.target.value})} />
+            <Input label="Maaş (₺)" type="number" icon={DollarSign} onChange={(e:any)=>setForm({...form, sal: Number(e.target.value)})} />
             <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95">Personeli Kaydet</button>
          </div>
       </Modal>
@@ -525,8 +552,10 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
 };
 
 /** --- AYARLAR --- **/
-const SettingsView = ({ settings, setSettings, systemPass, setSystemPass }: any) => {
+// Fix: Added missing props to SettingsView to enable full data backup functionality.
+const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, products, customers, invoices, transactions, employees, proposals }: any) => {
   const [form, setForm] = useState(settings);
+  const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -540,26 +569,34 @@ const SettingsView = ({ settings, setSettings, systemPass, setSystemPass }: any)
   };
 
   const save = () => {
-    setSettings(form);
-    if(newPass.trim().length >= 6) {
+    // Şifre değiştirme kontrolü
+    if(newPass.trim().length > 0) {
+      if(oldPass !== systemPass) {
+        alert("Hata: Mevcut şifreniz yanlış!");
+        return;
+      }
+      if(newPass.trim().length < 6) {
+        alert("Hata: Yeni şifre en az 6 karakter olmalıdır!");
+        return;
+      }
       setSystemPass(newPass);
-      alert('Tüm ayarlar ve şifreniz güncellendi!');
-    } else if(newPass.length > 0) {
-      alert('Hata: Şifre en az 6 karakter olmalıdır. Firma bilgileri kaydedildi.');
-    } else {
-      alert('Ayarlar Kaydedildi.');
     }
+    
+    setSettings(form);
+    alert('Ayarlar Başarıyla Kaydedildi.');
+    setOldPass("");
+    setNewPass("");
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in">
+    <div className="max-w-4xl mx-auto space-y-12">
        <div className="flex items-center gap-8 mb-16">
           <div className="p-8 bg-slate-900 text-white rounded-[40px] shadow-2xl shadow-blue-500/20"><Settings size={48}/></div>
           <div><h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">Ayarlar</h1><p className="text-slate-400 font-bold text-lg">Kurumsal Kimlik ve Güvenlik</p></div>
        </div>
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
-             <h4 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.4em] border-b pb-6">Kurumsal Bilgiler</h4>
+             <h4 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.4em] border-b pb-6 flex items-center gap-2"><Building2 size={16}/> Kurumsal Bilgiler</h4>
              <div className="flex flex-col items-center gap-6 p-8 bg-slate-50 dark:bg-slate-900 rounded-[35px] border border-dashed">
                 <div className="w-24 h-24 bg-white rounded-3xl overflow-hidden shadow-xl flex items-center justify-center">
                    {form.logo ? <img src={form.logo} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-slate-300"/>}
@@ -567,22 +604,25 @@ const SettingsView = ({ settings, setSettings, systemPass, setSystemPass }: any)
                 <input type="file" ref={fileRef} onChange={handleLogoUpload} className="hidden" accept="image/*" />
                 <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600"><Upload size={14}/> Firma Logosunu Değiştir</button>
              </div>
-             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={e=>setForm({...form, title: e.target.value})} />
-             <Input label="VKN / TCKN" icon={FileCode} value={form.vkn} onChange={e=>setForm({...form, vkn: e.target.value})} />
-             <Input label="Adres" icon={MapPin} value={form.address} onChange={e=>setForm({...form, address: e.target.value})} />
+             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={(e:any)=>setForm({...form, title: e.target.value})} />
+             <Input label="VKN / TCKN" icon={FileCode} value={form.vkn} onChange={(e:any)=>setForm({...form, vkn: e.target.value})} />
           </div>
           <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
-             <h4 className="text-[11px] font-black text-orange-600 uppercase tracking-[0.4em] border-b pb-6">Güvenlik Ayarları</h4>
+             <h4 className="text-[11px] font-black text-orange-600 uppercase tracking-[0.4em] border-b pb-6 flex items-center gap-2"><ShieldCheck size={16}/> Güvenlik Ayarları</h4>
              <div className="p-8 bg-orange-50 dark:bg-orange-900/10 rounded-[35px] border border-orange-100">
-                <p className="text-xs text-orange-700 font-bold mb-6">Mevcut giriş şifresini (`{systemPass}`) güncellemek için aşağıya yeni bir şifre girin.</p>
-                <Input label="YENİ GİRİŞ ŞİFRESİ" type="password" icon={Lock} placeholder="En az 6 hane" onChange={e=>setNewPass(e.target.value)} />
+                <p className="text-xs text-orange-700 font-bold mb-6">Şifrenizi güncellemek için önce mevcut şifreyi girin.</p>
+                <div className="space-y-4">
+                  <Input label="MEVCUT ŞİFRE" type="password" icon={Lock} value={oldPass} onChange={(e:any)=>setOldPass(e.target.value)} />
+                  <Input label="YENİ GİRİŞ ŞİFRESİ" type="password" icon={Lock} value={newPass} placeholder="En az 6 hane" onChange={(e:any)=>setNewPass(e.target.value)} />
+                </div>
              </div>
              <div className="pt-10 border-t grid grid-cols-2 gap-6">
                 <button onClick={()=>{
-                  const blob = new Blob([JSON.stringify(storage.get('products', []), null, 2)], {type:'application/json'});
+                  // Fix: All required data states are now passed as props and available for backup.
+                  const blob = new Blob([JSON.stringify({products, customers, invoices, transactions, employees, proposals, settings}, null, 2)], {type:'application/json'});
                   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'yedek.json'; a.click();
-                }} className="flex flex-col items-center justify-center gap-3 p-8 bg-slate-900 text-white rounded-[40px] hover:bg-black active:scale-95"><HardDrive size={24}/><span className="text-[10px] font-black uppercase">Yedek Al</span></button>
-                <button onClick={()=>{ if(confirm('Tüm veriler silinecek! Onaylıyor musunuz?')) { localStorage.clear(); window.location.reload(); }}} className="flex flex-col items-center justify-center gap-3 p-8 bg-rose-500 text-white rounded-[40px] hover:bg-rose-600 active:scale-95"><RefreshCw size={24}/><span className="text-[10px] font-black uppercase">Sıfırla</span></button>
+                }} className="flex flex-col items-center justify-center gap-3 p-8 bg-slate-900 text-white rounded-[40px] hover:bg-black active:scale-95"><HardDrive size={24}/><span className="text-[10px] font-black uppercase">Veri Yedekle</span></button>
+                <button onClick={()=>{ if(confirm('Tüm veriler silinecek! Onaylıyor musunuz?')) { localStorage.clear(); window.location.reload(); }}} className="flex flex-col items-center justify-center gap-3 p-8 bg-rose-500 text-white rounded-[40px] hover:bg-rose-600 active:scale-95"><RefreshCw size={24}/><span className="text-[10px] font-black uppercase">Sistemi Sıfırla</span></button>
              </div>
           </div>
        </div>
@@ -593,7 +633,7 @@ const SettingsView = ({ settings, setSettings, systemPass, setSystemPass }: any)
 
 /** --- DİĞER MODÜLLER --- **/
 const TransactionsView = ({ transactions }: any) => (
-  <div className="space-y-10 animate-in slide-in-from-bottom-8">
+  <div className="space-y-10">
     <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Kasa Hareketleri</h1>
     <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border overflow-hidden">
       <table className="w-full text-left">
@@ -623,7 +663,7 @@ const ReportsView = ({ products }: any) => {
     return acc;
   }, []);
   return (
-    <div className="space-y-16 animate-in fade-in">
+    <div className="space-y-16">
        <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Analiz & Rapor</h1>
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border h-[550px]">
