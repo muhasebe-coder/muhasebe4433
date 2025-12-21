@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { DashboardStats, Product, Transaction } from "../types";
 
@@ -57,12 +58,15 @@ export const chatWithAIAdvisor = async (userMessage: string, context: any): Prom
 
 export const analyzeReceipt = async (imageBase64: string): Promise<{ description: string, amount: number, date: string } | null> => {
   try {
+    // Fix: Using the correct multi-part content format { parts: [...] }
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [
-        { inlineData: { mimeType: 'image/jpeg', data: cleanBase64(imageBase64) } },
-        { text: "Fiş detaylarını çıkar: işyeri adı (description), toplam tutar (amount - sayı), tarih (date - YYYY-MM-DD)." }
-      ],
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: cleanBase64(imageBase64) } },
+          { text: "Fiş detaylarını çıkar: işyeri adı (description), toplam tutar (amount - sayı), tarih (date - YYYY-MM-DD)." }
+        ]
+      },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
