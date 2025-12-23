@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { DashboardStats, Product, Transaction } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -7,6 +7,38 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const cleanBase64 = (base64Str: string) => {
   return base64Str.split(',')[1] || base64Str;
 };
+
+// AI'nın veri üzerinde işlem yapabilmesi için fonksiyon tanımları
+const tools: { functionDeclarations: FunctionDeclaration[] }[] = [{
+  functionDeclarations: [
+    {
+      name: 'delete_employee',
+      parameters: {
+        type: Type.OBJECT,
+        description: 'İsmi verilen personeli sistemden kalıcı olarak siler.',
+        properties: {
+          fullName: {
+            type: Type.STRING,
+            description: 'Silinecek personelin tam adı veya sistemdeki adı.'
+          }
+        },
+        required: ['fullName']
+      }
+    },
+    {
+      name: 'update_stock_quantity',
+      parameters: {
+        type: Type.OBJECT,
+        description: 'Belirli bir ürünün stok miktarını günceller.',
+        properties: {
+          productName: { type: Type.STRING, description: 'Ürün adı' },
+          newQuantity: { type: Type.NUMBER, description: 'Yeni stok miktarı' }
+        },
+        required: ['productName', 'newQuantity']
+      }
+    }
+  ]
+}];
 
 export const getFinancialAdvice = async (
   stats: DashboardStats,
@@ -21,7 +53,6 @@ export const getFinancialAdvice = async (
     - Net Kâr: ${stats.netProfit} TL
     - Kritik Stoktaki Ürün Sayısı: ${stats.lowStockCount}
     Kritik Stok Ürünleri: ${lowStockItems.map(i => i.name).join(', ')}
-    Tavsiyeler:
   `;
 
   try {
@@ -35,30 +66,35 @@ export const getFinancialAdvice = async (
   }
 };
 
-export const chatWithAIAdvisor = async (userMessage: string, context: any): Promise<string> => {
+export const chatWithAIAdvisor = async (userMessage: string, context: any) => {
     const prompt = `
-      Sen bir uzman finansal danışmansın. Şirket verileri şunlar:
+      Sen Mustafa Ticaret'in uzman finansal danışmanısın. Şirket verileri şunlar:
       ${JSON.stringify(context)}
       
       Kullanıcı sorusu: ${userMessage}
       
-      Yanıtını profesyonel, yapıcı ve Türkçe olarak ver.
+      Eğer kullanıcı bir personeli çıkarmak (silmek) istiyorsa 'delete_employee' fonksiyonunu çağır.
+      Eğer stok güncellemek istiyorsa 'update_stock_quantity' fonksiyonunu çağır.
+      Yanıtını profesyonel ve Türkçe olarak ver.
     `;
     
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
+        config: {
+          tools: tools
+        }
       });
-      return response.text || "Üzgünüm, yanıt veremiyorum.";
+      return response;
     } catch (e) {
-      return "Bir hata oluştu.";
+      console.error(e);
+      return null;
     }
 };
 
 export const analyzeReceipt = async (imageBase64: string): Promise<{ description: string, amount: number, date: string } | null> => {
   try {
-    // Fix: Using the correct multi-part content format { parts: [...] }
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: {
