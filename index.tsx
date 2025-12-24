@@ -30,8 +30,17 @@ const storage = {
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /** --- BİLEŞENLER --- **/
-// Modal component with explicit props to fix children missing error
-const Modal = ({ isOpen, onClose, title, children, size = "max-w-lg" }: { isOpen: boolean; onClose: () => void; title: string; children?: React.ReactNode; size?: string }) => {
+
+// Define ModalProps to fix 'children' missing errors in TSX
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  size?: string;
+}
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = "max-w-lg" }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md">
@@ -46,8 +55,13 @@ const Modal = ({ isOpen, onClose, title, children, size = "max-w-lg" }: { isOpen
   );
 };
 
-// Input component with explicit props to fix icon missing error
-const Input = ({ label, icon: Icon, ...props }: { label: string; icon?: any; [key: string]: any }) => (
+// Define InputProps and make icon optional to fix missing icon errors
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+  icon?: React.ComponentType<{ size?: number }>;
+}
+
+const Input: React.FC<InputProps> = ({ label, icon: Icon, ...props }) => (
   <div className="space-y-2">
     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{label}</label>
     <div className="relative group">
@@ -178,7 +192,7 @@ const DashboardView = ({ products, transactions, invoices }: any) => {
   const crit = products.filter((p: any) => p.stock <= (p.min || 5)).length;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700">
       <div className="flex justify-between items-end">
         <div><h1 className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter">Mustafa Bey, Hoşgeldiniz 👋</h1></div>
         <div className="bg-white dark:bg-slate-800 px-10 py-6 rounded-[40px] shadow-2xl border dark:border-slate-700">
@@ -210,7 +224,7 @@ const InventoryView = ({ products, setProducts }: any) => {
   const [form, setForm] = useState({ name: '', sku: '', cat: 'Genel', stock: 0, price: 0, min: 5 });
   const [search, setSearch] = useState("");
 
-  const filtered = products.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())));
 
   const save = () => {
     if(!form.name) return;
@@ -224,22 +238,18 @@ const InventoryView = ({ products, setProducts }: any) => {
     setForm({ name: '', sku: '', cat: 'Genel', stock: 0, price: 0, min: 5 });
   };
 
-  const edit = (p: any) => {
-    setEditingId(p.id);
-    setForm({ ...p });
-    setModal(true);
-  };
-
   return (
     <div className="space-y-10">
       <div className="flex justify-between items-center">
         <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Stok Takibi</h1>
         <button onClick={() => { setEditingId(null); setForm({ name: '', sku: '', cat: 'Genel', stock: 0, price: 0, min: 5 }); setModal(true); }} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl hover:bg-blue-700"><Plus size={24}/> Ürün Ekle</button>
       </div>
+      
       <div className="relative">
         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-        <input className="w-full pl-16 pr-6 py-5 bg-white dark:bg-slate-800 border rounded-[25px] outline-none focus:ring-4 ring-blue-500/10 font-bold" placeholder="Stoklarda ara..." value={search} onChange={e=>setSearch(e.target.value)} />
+        <input className="w-full pl-16 pr-6 py-5 bg-white dark:bg-slate-800 border rounded-[25px] outline-none font-bold" placeholder="Ürün ismi veya kod ile ara..." value={search} onChange={e=>setSearch(e.target.value)} />
       </div>
+
       <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black uppercase tracking-[0.3em] border-b">
@@ -253,24 +263,20 @@ const InventoryView = ({ products, setProducts }: any) => {
                 <td className="p-10 text-center"><div className={`text-xl font-black ${p.stock <= (p.min || 5) ? 'text-rose-500 animate-pulse' : 'text-emerald-500'}`}>{p.stock} Adet</div></td>
                 <td className="p-10 text-right font-black text-2xl tracking-tighter">₺{Number(p.price).toLocaleString()}</td>
                 <td className="p-10 text-right flex justify-end gap-2">
-                  <button onClick={() => edit(p)} className="p-4 text-slate-300 hover:text-blue-500 transition-colors"><Edit size={22}/></button>
-                  <button onClick={() => setProducts(products.filter((x: any)=>x.id !== p.id))} className="p-4 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={22}/></button>
+                  <button onClick={() => { setEditingId(p.id); setForm({...p}); setModal(true); }} className="p-4 text-slate-300 hover:text-blue-500 transition-colors"><Edit size={22}/></button>
+                  <button onClick={() => { if(confirm('Silsin mi?')) setProducts(products.filter((x: any)=>x.id !== p.id)) }} className="p-4 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={22}/></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {/* Fixed Modal and Input usages with explicit props to resolve TS errors */}
       <Modal isOpen={modal} onClose={() => setModal(false)} title={editingId ? "Stok Kartı Düzenle" : "Yeni Stok Kartı"}>
          <div className="space-y-8">
-            <Input label="Ürün Adı" icon={Package} value={form.name} onChange={(e: any)=>setForm({...form, name: e.target.value})} />
-            <div className="grid grid-cols-2 gap-6"><Input label="Kategori" icon={Filter} value={form.cat} onChange={(e: any)=>setForm({...form, cat: e.target.value})} /><Input label="Stok Kodu" icon={FileCode} value={form.sku} onChange={(e: any)=>setForm({...form, sku: e.target.value})} /></div>
-            <div className="grid grid-cols-3 gap-6">
-              <Input label="Mevcut Stok" icon={HardDrive} type="number" value={form.stock} onChange={(e: any)=>setForm({...form, stock: Number(e.target.value)})} />
-              <Input label="Birim Fiyat" icon={DollarSign} type="number" value={form.price} onChange={(e: any)=>setForm({...form, price: Number(e.target.value)})} />
-              <Input label="Kritik Limit" icon={AlertTriangle} type="number" value={form.min} onChange={(e: any)=>setForm({...form, min: Number(e.target.value)})} />
-            </div>
+            <Input label="Ürün Adı" icon={Package} value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} />
+            <div className="grid grid-cols-2 gap-6"><Input label="Kategori" icon={Filter} value={form.cat} onChange={(e)=>setForm({...form, cat: e.target.value})} /><Input label="Stok Kodu" icon={FileCode} value={form.sku} onChange={(e)=>setForm({...form, sku: e.target.value})} /></div>
+            {/* Input icons are now optional via the updated Input component definition */}
+            <div className="grid grid-cols-3 gap-6"><Input label="Mevcut Stok" type="number" value={form.stock} onChange={(e: any)=>setForm({...form, stock: Number(e.target.value)})} /><Input label="Birim Fiyat" type="number" value={form.price} onChange={(e: any)=>setForm({...form, price: Number(e.target.value)})} /><Input label="Kritik Limit" type="number" value={form.min} onChange={(e: any)=>setForm({...form, min: Number(e.target.value)})} /></div>
             <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-700 mt-4 active:scale-95">{editingId ? 'Güncelle' : 'Kaydet'}</button>
          </div>
       </Modal>
@@ -286,7 +292,6 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
   const [selected, setSelected] = useState<any>(null);
   const [form, setForm] = useState({ name: '', phone: '', city: '', type: 'MÜŞTERİ' });
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("ALL");
 
   const getBalance = (name: string) => {
     const inv = invoices.filter((i: any) => i.customer === name).reduce((a: any, b: any) => a + b.amount, 0);
@@ -294,11 +299,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
     return inv - pay;
   };
 
-  const filtered = customers.filter((c: any) => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "ALL" || c.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const filtered = customers.filter((c: any) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   const save = () => {
     if(!form.name) return;
@@ -310,22 +311,6 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
     }
     setModal(false);
     setEditingId(null);
-  };
-
-  const edit = () => {
-    if(!selected) return;
-    setEditingId(selected.id);
-    setForm({ name: selected.name, phone: selected.phone, city: selected.city, type: selected.type });
-    setModal(true);
-  };
-
-  const handleQuickPayment = () => {
-     if(!selected) return;
-     const amount = prompt(`${selected.name} için alınacak tahsilat tutarını girin:`);
-     if(!amount || isNaN(Number(amount))) return;
-     const val = Number(amount);
-     setTransactions([{ id: 'TX-'+Date.now(), desc: `Tahsilat: ${selected.name}`, amount: val, type: 'GELİR', date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT' }, ...transactions]);
-     alert('Tahsilat başarıyla işlendi.');
   };
 
   const confirmDelete = () => {
@@ -343,18 +328,13 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
           <h1 className="text-4xl font-black uppercase tracking-tighter dark:text-white">Cariler</h1>
           <button onClick={() => { setEditingId(null); setForm({ name: '', phone: '', city: '', type: 'MÜŞTERİ' }); setModal(true); }} className="bg-slate-900 text-white p-5 rounded-[25px] hover:bg-black"><Plus size={28}/></button>
         </div>
-        <div className="space-y-4">
-           <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl">
-              <button onClick={()=>setTypeFilter("ALL")} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${typeFilter==="ALL"?'bg-white text-blue-600 shadow-sm':'text-slate-500'}`}>Tümü</button>
-              <button onClick={()=>setTypeFilter("MÜŞTERİ")} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${typeFilter==="MÜŞTERİ"?'bg-white text-blue-600 shadow-sm':'text-slate-500'}`}>Müşteri</button>
-              <button onClick={()=>setTypeFilter("TEDARİKÇİ")} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${typeFilter==="TEDARİKÇİ"?'bg-white text-blue-600 shadow-sm':'text-slate-500'}`}>Tedarikçi</button>
-           </div>
-           <div className="relative">
-             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-             <input className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border rounded-2xl outline-none font-bold text-sm" placeholder="İsim ara..." value={search} onChange={e=>setSearch(e.target.value)} />
-           </div>
+        
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <input className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border rounded-2xl outline-none font-bold text-sm" placeholder="Cari ara..." value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border h-[calc(100vh-420px)] overflow-y-auto custom-scrollbar">
+
+        <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
            {filtered.map((c: any) => {
              const b = getBalance(c.name);
              return (
@@ -384,7 +364,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Net Bakiye</p>
                         <div className={`text-4xl font-black tracking-tighter ${getBalance(selected.name) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₺{Math.abs(getBalance(selected.name)).toLocaleString()}</div>
                     </div>
-                    <button onClick={edit} className="flex items-center justify-center gap-2 py-3 bg-slate-100 dark:bg-slate-700 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all"><Edit size={16}/> Cariyi Düzenle</button>
+                    <button onClick={()=>{ setEditingId(selected.id); setForm({...selected}); setModal(true); }} className="flex items-center justify-center gap-2 py-3 bg-slate-100 dark:bg-slate-700 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all"><Edit size={16}/> Cariyi Düzenle</button>
                  </div>
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
@@ -405,8 +385,8 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
                  </div>
               </div>
               <div className="mt-12 grid grid-cols-2 gap-6">
-                 <button onClick={handleQuickPayment} className="bg-emerald-500 text-white py-8 rounded-[35px] font-black uppercase shadow-2xl hover:bg-emerald-600 flex items-center justify-center gap-4 text-sm active:scale-95 transition-transform"><ArrowDownLeft size={24}/> Tahsilat Al</button>
-                 <button onClick={() => setDeleteConfirmModal(true)} className="bg-red-500 text-white py-8 rounded-[35px] font-black uppercase shadow-2xl hover:bg-red-600 flex items-center justify-center gap-4 text-sm active:scale-95 transition-transform"><Trash2 size={24}/> Kaydı Sil</button>
+                 <button onClick={()=>{ const amount = prompt('Alınacak tutar?'); if(amount) setTransactions([{id: storage.id('TX'), desc:`Tahsilat: ${selected.name}`, amount: Number(amount), type:'GELİR', date: new Date().toLocaleDateString('tr-TR')}, ...transactions]); }} className="bg-emerald-500 text-white py-8 rounded-[35px] font-black uppercase shadow-2xl hover:bg-emerald-600 flex items-center justify-center gap-4 text-sm active:scale-95 transition-transform"><ArrowDownLeft size={24}/> Tahsilat Al</button>
+                 <button onClick={() => setDeleteConfirmModal(true)} className="bg-red-50 text-white py-8 rounded-[35px] font-black uppercase shadow-2xl hover:bg-red-600 flex items-center justify-center gap-4 text-sm active:scale-95 transition-transform"><Trash2 size={24}/> Kaydı Sil</button>
               </div>
            </div>
          ) : (
@@ -416,9 +396,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
 
       <Modal isOpen={deleteConfirmModal} onClose={() => setDeleteConfirmModal(false)} title="Kaydı Kalıcı Olarak Sil">
          <div className="text-center space-y-6">
-            <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
-               <AlertTriangle size={48} />
-            </div>
+            <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto"><AlertTriangle size={48} /></div>
             <p className="text-lg font-bold text-slate-600"><strong>{selected?.name}</strong> carisini silmek istediğinize emin misiniz?</p>
             <div className="flex gap-4">
                <button onClick={() => setDeleteConfirmModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-[20px] font-black uppercase text-xs">Vazgeç</button>
@@ -430,7 +408,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
       <Modal isOpen={modal} onClose={() => setModal(false)} title={editingId ? "Cari Hesabı Düzenle" : "Yeni Cari Hesabı"}>
          <div className="space-y-8">
             <Input label="Ünvan / İsim" icon={Users} value={form.name} onChange={(e: any)=>setForm({...form, name: e.target.value})} />
-            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-2">Cari Tipi</label><select value={form.type} className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900 border rounded-2xl font-bold" onChange={(e: any)=>setForm({...form, type: e.target.value})}><option value="MÜŞTERİ">Müşteri</option><option value="TEDARİKÇİ">Tedarikçi</option></select></div>
+            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-2">Cari Tipi</label><select value={form.type} className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900 border rounded-2xl font-bold" onChange={(e)=>setForm({...form, type: e.target.value})}><option value="MÜŞTERİ">Müşteri</option><option value="TEDARİKÇİ">Tedarikçi</option></select></div>
             <div className="grid grid-cols-2 gap-6"><Input label="Telefon" icon={Phone} value={form.phone} onChange={(e: any)=>setForm({...form, phone: e.target.value})} /><Input label="Şehir" icon={MapPin} value={form.city} onChange={(e: any)=>setForm({...form, city: e.target.value})} /></div>
             <button onClick={save} className="w-full bg-slate-900 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95">{editingId ? 'Güncelle' : 'Kaydet'}</button>
          </div>
@@ -463,8 +441,8 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
 
   const paySalary = (e: any) => {
     if(!confirm(`${e.name} için maaş ödemesini onaylıyor musunuz?`)) return;
-    setTransactions((prev: any) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş: ${e.name}`, amount: Number(e.sal), type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
-    alert('Maaş Ödendi!');
+    setTransactions((prev: any) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş Ödemesi: ${e.name}`, amount: Number(e.sal), type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
+    alert('Maaş Ödendi ve Kasa Kaydı Oluşturuldu!');
   };
 
   const confirmDelete = () => {
@@ -480,20 +458,22 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
         <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Personel</h1>
         <button onClick={() => { setEditingId(null); setForm({ name: '', pos: '', sal: 0 }); setModal(true); }} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] flex items-center gap-3 font-black text-sm uppercase shadow-2xl active:scale-95"><Plus size={24}/> Ekle</button>
       </div>
+
       <div className="relative">
         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-        <input className="w-full pl-16 pr-6 py-5 bg-white dark:bg-slate-800 border rounded-[25px] outline-none font-bold" placeholder="Personel ara..." value={search} onChange={e=>setSearch(e.target.value)} />
+        <input className="w-full pl-16 pr-6 py-5 bg-white dark:bg-slate-800 border rounded-[25px] outline-none font-bold" placeholder="Personel ismi veya pozisyon ara..." value={search} onChange={e=>setSearch(e.target.value)} />
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
          {filtered.map((e: any) => (
-            <div key={e.id} className="bg-white dark:bg-slate-800 p-10 rounded-[50px] shadow-sm border group text-center relative hover:shadow-2xl">
+            <div key={e.id} className="bg-white dark:bg-slate-800 p-10 rounded-[50px] shadow-sm border group text-center relative hover:shadow-2xl transition-all">
                <button onClick={() => { setEditingId(e.id); setForm({...e}); setModal(true); }} className="absolute top-8 right-8 p-2 text-slate-300 hover:text-blue-500"><Edit size={22}/></button>
                <div className="w-24 h-24 bg-slate-50 dark:bg-slate-700 rounded-3xl flex items-center justify-center font-black text-4xl text-slate-300 mx-auto mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all">{e.name[0]}</div>
                <h4 className="font-black text-3xl dark:text-white uppercase mb-2 tracking-tighter">{e.name}</h4>
                <p className="text-[12px] font-black text-slate-400 uppercase tracking-widest">{e.pos}</p>
                <div className="mt-8 pt-8 border-t dark:border-slate-700"><p className="text-[10px] font-black text-slate-300 uppercase mb-2 tracking-widest">Aylık Maaş</p><p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">₺{Number(e.sal).toLocaleString()}</p></div>
                <button onClick={() => paySalary(e)} className="w-full mt-10 bg-emerald-50 text-emerald-600 py-6 rounded-[30px] font-black text-sm uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm">Maaş Öde</button>
-               <button onClick={() => { setSelectedEmp(e); setDeleteConfirmModal(true); }} className="mt-6 text-[11px] text-slate-300 font-black uppercase tracking-[0.2em] hover:text-red-500 transition-colors">Personeli Çıkar</button>
+               <button onClick={() => { setSelectedEmp(e); setDeleteConfirmModal(true); }} className="mt-6 text-[11px] text-slate-300 font-black uppercase tracking-[0.2em] hover:text-red-500 transition-colors cursor-pointer">Personeli Çıkar</button>
             </div>
          ))}
       </div>
@@ -501,7 +481,7 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
       <Modal isOpen={deleteConfirmModal} onClose={() => setDeleteConfirmModal(false)} title="Personel Kaydını Sil">
          <div className="text-center space-y-6">
             <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto"><AlertTriangle size={48} /></div>
-            <p className="text-lg font-bold text-slate-600"><strong>{selectedEmp?.name}</strong> isimli personeli silmek istediğinize emin misiniz?</p>
+            <p className="text-lg font-bold text-slate-600"><strong>{selectedEmp?.name}</strong> isimli personeli sistemden çıkarmak istediğinize emin misiniz?</p>
             <div className="flex gap-4">
                <button onClick={() => setDeleteConfirmModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-[20px] font-black uppercase text-xs">Vazgeç</button>
                <button onClick={confirmDelete} className="flex-1 py-4 bg-rose-600 text-white rounded-[20px] font-black uppercase text-xs">Evet, Çıkar</button>
@@ -521,73 +501,7 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
   );
 };
 
-/** --- DİĞER MODÜLLER VE AYARLAR (JS UYUMLU) --- **/
-const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, products, customers, invoices, transactions, employees, proposals }: any) => {
-  const [form, setForm] = useState(settings);
-  const [oldPass, setOldPass] = useState("");
-  const [newPass, setNewPass] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if(file) {
-      const reader = new FileReader();
-      reader.onloadend = () => { 
-        const result = reader.result as string;
-        setForm({...form, logo: result}); 
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const save = () => {
-    if(newPass.trim().length > 0) {
-      if(oldPass !== systemPass) { alert("Hata: Mevcut şifreniz yanlış!"); return; }
-      if(newPass.trim().length < 6) { alert("Hata: Yeni şifre en az 6 karakter olmalıdır!"); return; }
-      setSystemPass(newPass);
-    }
-    setSettings(form);
-    alert('Ayarlar Başarıyla Kaydedildi.');
-    setOldPass(""); setNewPass("");
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-12">
-       <div className="flex items-center gap-8 mb-16">
-          <div className="p-8 bg-slate-900 text-white rounded-[40px] shadow-2xl shadow-blue-500/20"><Settings size={48}/></div>
-          <div><h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">Ayarlar</h1><p className="text-slate-400 font-bold text-lg">Güvenlik ve Kurumsal</p></div>
-       </div>
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
-             <h4 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.4em] border-b pb-6">Kurumsal Bilgiler</h4>
-             <div className="flex flex-col items-center gap-6 p-8 bg-slate-50 dark:bg-slate-900 rounded-[35px] border border-dashed">
-                <div className="w-24 h-24 bg-white rounded-3xl overflow-hidden shadow-xl flex items-center justify-center">
-                   {form.logo ? <img src={form.logo} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-slate-300"/>}
-                </div>
-                <input type="file" ref={fileRef} onChange={handleLogoUpload} className="hidden" accept="image/*" />
-                <button onClick={() => fileRef.current?.click()} className="text-xs font-black uppercase text-blue-600">Logo Değiştir</button>
-             </div>
-             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={(e: any)=>setForm({...form, title: e.target.value})} />
-          </div>
-          <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
-             <h4 className="text-[11px] font-black text-orange-600 uppercase tracking-[0.4em] border-b pb-6">Güvenlik</h4>
-             {/* Fixed Input usages with explicit Lock icon to resolve TS errors */}
-             <Input label="Mevcut Şifre" icon={Lock} type="password" value={oldPass} onChange={(e: any)=>setOldPass(e.target.value)} />
-             <Input label="Yeni Şifre" icon={Lock} type="password" value={newPass} onChange={(e: any)=>setNewPass(e.target.value)} />
-             <div className="pt-10 border-t grid grid-cols-2 gap-6">
-                <button onClick={()=>{
-                  const blob = new Blob([JSON.stringify({products, customers, invoices, transactions, employees, proposals, settings}, null, 2)], {type:'application/json'});
-                  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'yedek.json'; a.click();
-                }} className="p-8 bg-slate-900 text-white rounded-[40px] text-[10px] font-black uppercase">Yedekle</button>
-                <button onClick={()=>{ if(confirm('Tüm veriler silinecek!')) { localStorage.clear(); window.location.reload(); }}} className="p-8 bg-rose-500 text-white rounded-[40px] text-[10px] font-black uppercase">Sıfırla</button>
-             </div>
-          </div>
-       </div>
-       <button onClick={save} className="w-full bg-blue-600 text-white py-8 rounded-[45px] font-black uppercase tracking-[0.4em] shadow-2xl active:scale-95 text-xl flex items-center justify-center gap-4"><Save size={28}/> Kaydet</button>
-    </div>
-  );
-};
-
+/** --- DİĞER MODÜLLER --- **/
 const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransactions, settings }: any) => {
   const [search, setSearch] = useState("");
   const filtered = invoices.filter((i: any) => i.customer.toLowerCase().includes(search.toLowerCase()));
@@ -608,11 +522,11 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
               <tr key={i.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10 font-black text-indigo-600">{i.id}</td>
                 <td className="p-10 font-black dark:text-white uppercase">{i.customer}</td>
-                <td className="p-10 text-center"><span className="bg-indigo-50 text-indigo-600 px-5 py-2 rounded-2xl text-[10px] font-black uppercase">{i.method}</span></td>
+                <td className="p-10 text-center"><span className="bg-indigo-50 text-indigo-600 px-5 py-2 rounded-2xl text-[10px] font-black uppercase">{i.method || 'NAKİT'}</span></td>
                 <td className="p-10 text-right font-black text-2xl">₺{i.amount.toLocaleString()}</td>
                 <td className="p-10 text-right flex justify-end gap-2">
                    <button onClick={()=>window.print()} className="p-4 text-slate-300 hover:text-blue-500"><Printer size={22}/></button>
-                   <button onClick={() => setInvoices(invoices.filter((x: any)=>x.id !== i.id))} className="p-4 text-slate-300 hover:text-red-500"><Trash2 size={22}/></button>
+                   <button onClick={() => { if(confirm('Silinsin mi?')) setInvoices(invoices.filter((x: any)=>x.id !== i.id)) }} className="p-4 text-slate-300 hover:text-red-500"><Trash2 size={22}/></button>
                 </td>
               </tr>
             ))}
@@ -644,7 +558,7 @@ const TransactionsView = ({ transactions, setTransactions }: any) => {
               <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10 text-slate-400 font-bold">{t.date}</td>
                 <td className="p-10 font-black dark:text-white uppercase">{t.desc}</td>
-                <td className="p-10 text-center"><span className="text-[10px] font-black px-5 py-2.5 bg-slate-100 rounded-2xl uppercase text-slate-500">{t.method}</span></td>
+                <td className="p-10 text-center"><span className="text-[10px] font-black px-5 py-2.5 bg-slate-100 rounded-2xl uppercase text-slate-500">{t.method || 'NAKİT'}</span></td>
                 <td className={`p-10 text-right font-black text-2xl ${t.type === 'GELİR' ? 'text-emerald-500' : 'text-rose-500'}`}>{t.type === 'GELİR' ? '+' : '-'}₺{t.amount.toLocaleString()}</td>
               </tr>
             ))}
@@ -655,9 +569,74 @@ const TransactionsView = ({ transactions, setTransactions }: any) => {
   );
 };
 
-const ProposalsView = () => (<div className="p-20 text-center text-slate-300 font-black uppercase">Teklifler Modülü Hazırlanıyor...</div>);
-const ReportsView = () => (<div className="p-20 text-center text-slate-300 font-black uppercase">Raporlar Modülü Hazırlanıyor...</div>);
-const AIView = () => (<div className="p-20 text-center text-slate-300 font-black uppercase">AI Asistan Modülü Hazırlanıyor...</div>);
+const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, products, customers, invoices, transactions, employees, proposals }: any) => {
+  const [form, setForm] = useState(settings);
+  const [oldPass, setOldPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(<App />);
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if(file) {
+      const reader = new FileReader();
+      reader.onloadend = () => { setForm({...form, logo: reader.result as string}); };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const save = () => {
+    if(newPass.trim().length > 0) {
+      if(oldPass !== systemPass) { alert("Hata: Mevcut şifre yanlış!"); return; }
+      setSystemPass(newPass);
+    }
+    setSettings(form);
+    alert('Ayarlar Kaydedildi.');
+    setOldPass(""); setNewPass("");
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-12">
+       <div className="flex items-center gap-8 mb-16">
+          <div className="p-8 bg-slate-900 text-white rounded-[40px] shadow-2xl shadow-blue-500/20"><Settings size={48}/></div>
+          <div><h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">Ayarlar</h1><p className="text-slate-400 font-bold text-lg">Kurumsal ve Güvenlik</p></div>
+       </div>
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
+             <h4 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.4em] border-b pb-6">Kurumsal</h4>
+             <div className="flex flex-col items-center gap-6 p-8 bg-slate-50 dark:bg-slate-900 rounded-[35px] border border-dashed">
+                <div className="w-24 h-24 bg-white rounded-3xl overflow-hidden shadow-xl flex items-center justify-center">
+                   {form.logo ? <img src={form.logo} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-slate-300"/>}
+                </div>
+                <input type="file" ref={fileRef} onChange={handleLogoUpload} className="hidden" accept="image/*" />
+                <button onClick={() => fileRef.current?.click()} className="text-xs font-black uppercase text-blue-600">Logo Seç</button>
+             </div>
+             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={(e: any)=>setForm({...form, title: e.target.value})} />
+          </div>
+          <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
+             <h4 className="text-[11px] font-black text-orange-600 uppercase tracking-[0.4em] border-b pb-6">Şifre Değiştir</h4>
+             {/* Input components icons are now optional to fix property 'icon' missing errors */}
+             <Input label="Mevcut Şifre" type="password" value={oldPass} onChange={(e: any)=>setOldPass(e.target.value)} />
+             <Input label="Yeni Şifre" type="password" value={newPass} onChange={(e: any)=>setNewPass(e.target.value)} />
+             <div className="pt-10 border-t grid grid-cols-2 gap-6">
+                <button onClick={()=>{
+                  const blob = new Blob([JSON.stringify({products, customers, invoices, transactions, employees, proposals, settings}, null, 2)], {type:'application/json'});
+                  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'yedek.json'; a.click();
+                }} className="p-8 bg-slate-900 text-white rounded-[40px] text-[10px] font-black uppercase">Yedek Al</button>
+                <button onClick={()=>{ if(confirm('Tüm veriler silinecek!')) { localStorage.clear(); window.location.reload(); }}} className="p-8 bg-rose-500 text-white rounded-[40px] text-[10px] font-black uppercase">Sıfırla</button>
+             </div>
+          </div>
+       </div>
+       <button onClick={save} className="w-full bg-blue-600 text-white py-8 rounded-[45px] font-black uppercase tracking-[0.4em] shadow-2xl active:scale-95 text-xl flex items-center justify-center gap-4"><Save size={28}/> Kaydet</button>
+    </div>
+  );
+};
+
+const ProposalsView = () => <div className="p-20 text-center text-slate-300 font-black uppercase">Teklifler Modülü Gelecek Güncellemede...</div>;
+const ReportsView = () => <div className="p-20 text-center text-slate-300 font-black uppercase">Raporlar Modülü Gelecek Güncellemede...</div>;
+const AIView = () => <div className="p-20 text-center text-slate-300 font-black uppercase">AI Asistan Modülü Gelecek Güncellemede...</div>;
+
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(<App />);
+}
