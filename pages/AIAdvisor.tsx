@@ -44,21 +44,23 @@ const AIAdvisor: React.FC = () => {
       // Fonksiyon çağrısı var mı kontrol et
       if (response.functionCalls && response.functionCalls.length > 0) {
         for (const fc of response.functionCalls) {
+          // Fix: Cast args to any to access properties safely and avoid 'unknown' type errors
+          const args = fc.args as any;
           if (fc.name === 'delete_employee') {
-            const nameToFind = fc.args.fullName.toLowerCase();
+            const nameToFind = args.fullName.toLowerCase();
             const target = employees.find(e => e.fullName.toLowerCase().includes(nameToFind));
             if (target) {
               storageService.deleteEmployee(target.id);
               setMessages(prev => [...prev, { role: 'ai', text: `⚠️ İşlem Tamamlandı: **${target.fullName}** isimli personeli sistemden çıkardım.`, isAction: true }]);
             } else {
-              setMessages(prev => [...prev, { role: 'ai', text: `Üzgünüm, "${fc.args.fullName}" isimli bir personel bulamadım.` }]);
+              setMessages(prev => [...prev, { role: 'ai', text: `Üzgünüm, "${args.fullName}" isimli bir personel bulamadım.` }]);
             }
           }
           if (fc.name === 'update_stock_quantity') {
-            const prod = products.find(p => p.name.toLowerCase().includes(fc.args.productName.toLowerCase()));
+            const prod = products.find(p => p.name.toLowerCase().includes(args.productName.toLowerCase()));
             if (prod) {
-              storageService.updateProduct({ ...prod, quantity: fc.args.newQuantity });
-              setMessages(prev => [...prev, { role: 'ai', text: `📦 Stok Güncellendi: **${prod.name}** yeni miktarı: ${fc.args.newQuantity}`, isAction: true }]);
+              storageService.updateProduct({ ...prod, quantity: args.newQuantity });
+              setMessages(prev => [...prev, { role: 'ai', text: `📦 Stok Güncellendi: **${prod.name}** yeni miktarı: ${args.newQuantity}`, isAction: true }]);
             }
           }
         }

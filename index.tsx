@@ -17,30 +17,21 @@ import {
 
 /** --- YARDIMCI SERVİSLER --- **/
 const storage = {
-  get: (key: string, def: any) => {
+  get: (key, def) => {
     try {
       const val = localStorage.getItem('mpro_' + key);
       return val ? JSON.parse(val) : def;
     } catch (e) { return def; }
   },
-  set: (key: string, val: any) => localStorage.setItem('mpro_' + key, JSON.stringify(val)),
-  id: (pre: string) => pre + '-' + Math.random().toString(36).substr(2, 6).toUpperCase()
+  set: (key, val) => localStorage.setItem('mpro_' + key, JSON.stringify(val)),
+  id: (pre) => pre + '-' + Math.random().toString(36).substr(2, 6).toUpperCase()
 };
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /** --- BİLEŞENLER --- **/
 
-// Define ModalProps to fix 'children' missing errors in TSX
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  children: React.ReactNode;
-  size?: string;
-}
-
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = "max-w-lg" }) => {
+const Modal = ({ isOpen, onClose, title, children, size = "max-w-lg" }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md">
@@ -55,13 +46,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
   );
 };
 
-// Define InputProps and make icon optional to fix missing icon errors
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-  icon?: React.ComponentType<{ size?: number }>;
-}
-
-const Input: React.FC<InputProps> = ({ label, icon: Icon, ...props }) => (
+const Input = ({ label, icon: Icon, ...props }) => (
   <div className="space-y-2">
     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{label}</label>
     <div className="relative group">
@@ -97,7 +82,7 @@ const App = () => {
     storage.set('system_pass', systemPass);
   }, [products, customers, invoices, transactions, proposals, employees, settings, systemPass]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = (e) => {
     e.preventDefault();
     if (passInput === systemPass) {
       setIsAuth(true);
@@ -186,10 +171,10 @@ const App = () => {
 
 /** --- GÖRÜNÜMLER --- **/
 
-const DashboardView = ({ products, transactions, invoices }: any) => {
-  const inc = transactions.filter((t: any) => t.type === 'GELİR').reduce((a: any, b: any) => a + b.amount, 0);
-  const exp = transactions.filter((t: any) => t.type === 'GİDER').reduce((a: any, b: any) => a + b.amount, 0);
-  const crit = products.filter((p: any) => p.stock <= (p.min || 5)).length;
+const DashboardView = ({ products, transactions, invoices }) => {
+  const inc = transactions.filter((t) => t.type === 'GELİR').reduce((a, b) => a + b.amount, 0);
+  const exp = transactions.filter((t) => t.type === 'GİDER').reduce((a, b) => a + b.amount, 0);
+  const crit = products.filter((p) => p.stock <= (p.min || 5)).length;
 
   return (
     <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700">
@@ -204,13 +189,13 @@ const DashboardView = ({ products, transactions, invoices }: any) => {
         <StatItem title="Satışlar" value={`₺${inc.toLocaleString()}`} color="bg-emerald-500" icon={TrendingUp} />
         <StatItem title="Giderler" value={`₺${exp.toLocaleString()}`} color="bg-rose-500" icon={TrendingDown} />
         <StatItem title="Kritik Stok" value={crit} color="bg-orange-500" icon={AlertTriangle} />
-        <StatItem title="Bekleyen Tahsilat" value={invoices.filter((i: any)=>i.status === 'BEKLİYOR').length} color="bg-indigo-500" icon={Clock} />
+        <StatItem title="Bekleyen Tahsilat" value={invoices.filter((i)=>i.status === 'BEKLİYOR').length} color="bg-indigo-500" icon={Clock} />
       </div>
     </div>
   );
 };
 
-const StatItem = ({ title, value, color, icon: Icon }: any) => (
+const StatItem = ({ title, value, color, icon: Icon }) => (
   <div className="bg-white dark:bg-slate-800 p-10 rounded-[45px] shadow-sm border dark:border-slate-700 flex items-center justify-between group">
     <div><p className="text-[10px] font-black text-slate-400 uppercase mb-2">{title}</p><h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{value}</h3></div>
     <div className={`p-6 rounded-[30px] ${color} bg-opacity-10 group-hover:bg-opacity-20 transition-all`}><Icon className={color.replace('bg-', 'text-')} size={32} /></div>
@@ -218,18 +203,18 @@ const StatItem = ({ title, value, color, icon: Icon }: any) => (
 );
 
 /** --- STOK --- **/
-const InventoryView = ({ products, setProducts }: any) => {
+const InventoryView = ({ products, setProducts }) => {
   const [modal, setModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: '', sku: '', cat: 'Genel', stock: 0, price: 0, min: 5 });
   const [search, setSearch] = useState("");
 
-  const filtered = products.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())));
+  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())));
 
   const save = () => {
     if(!form.name) return;
     if(editingId) {
-      setProducts(products.map((p: any) => p.id === editingId ? { ...form, id: editingId } : p));
+      setProducts(products.map((p) => p.id === editingId ? { ...form, id: editingId } : p));
     } else {
       setProducts([{ ...form, id: storage.id('STK') }, ...products]);
     }
@@ -256,7 +241,7 @@ const InventoryView = ({ products, setProducts }: any) => {
             <tr><th className="p-10">Ürün Bilgisi</th><th className="p-10 text-center">Kategori</th><th className="p-10 text-center">Mevcut</th><th className="p-10 text-right">Fiyat</th><th className="p-10 text-right">İşlem</th></tr>
           </thead>
           <tbody className="divide-y font-medium">
-            {filtered.map((p: any) => (
+            {filtered.map((p) => (
               <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10"><div className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-lg">{p.name}</div><div className="text-[10px] text-slate-400 font-bold mt-1">KOD: {p.sku || p.id}</div></td>
                 <td className="p-10 text-center"><span className="bg-slate-100 dark:bg-slate-700 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">{p.cat}</span></td>
@@ -264,7 +249,7 @@ const InventoryView = ({ products, setProducts }: any) => {
                 <td className="p-10 text-right font-black text-2xl tracking-tighter">₺{Number(p.price).toLocaleString()}</td>
                 <td className="p-10 text-right flex justify-end gap-2">
                   <button onClick={() => { setEditingId(p.id); setForm({...p}); setModal(true); }} className="p-4 text-slate-300 hover:text-blue-500 transition-colors"><Edit size={22}/></button>
-                  <button onClick={() => { if(confirm('Silsin mi?')) setProducts(products.filter((x: any)=>x.id !== p.id)) }} className="p-4 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={22}/></button>
+                  <button onClick={() => { if(confirm('Bu stok kaydını silmek istediğinize emin misiniz?')) setProducts(products.filter((x)=>x.id !== p.id)) }} className="p-4 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={22}/></button>
                 </td>
               </tr>
             ))}
@@ -275,8 +260,12 @@ const InventoryView = ({ products, setProducts }: any) => {
          <div className="space-y-8">
             <Input label="Ürün Adı" icon={Package} value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} />
             <div className="grid grid-cols-2 gap-6"><Input label="Kategori" icon={Filter} value={form.cat} onChange={(e)=>setForm({...form, cat: e.target.value})} /><Input label="Stok Kodu" icon={FileCode} value={form.sku} onChange={(e)=>setForm({...form, sku: e.target.value})} /></div>
-            {/* Input icons are now optional via the updated Input component definition */}
-            <div className="grid grid-cols-3 gap-6"><Input label="Mevcut Stok" type="number" value={form.stock} onChange={(e: any)=>setForm({...form, stock: Number(e.target.value)})} /><Input label="Birim Fiyat" type="number" value={form.price} onChange={(e: any)=>setForm({...form, price: Number(e.target.value)})} /><Input label="Kritik Limit" type="number" value={form.min} onChange={(e: any)=>setForm({...form, min: Number(e.target.value)})} /></div>
+            <div className="grid grid-cols-3 gap-6">
+              {/* Fix: Added missing icons to Input calls */}
+              <Input label="Mevcut Stok" type="number" icon={Package} value={form.stock} onChange={(e)=>setForm({...form, stock: Number(e.target.value)})} />
+              <Input label="Birim Fiyat" type="number" icon={DollarSign} value={form.price} onChange={(e)=>setForm({...form, price: Number(e.target.value)})} />
+              <Input label="Kritik Limit" type="number" icon={AlertTriangle} value={form.min} onChange={(e)=>setForm({...form, min: Number(e.target.value)})} />
+            </div>
             <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-700 mt-4 active:scale-95">{editingId ? 'Güncelle' : 'Kaydet'}</button>
          </div>
       </Modal>
@@ -285,26 +274,26 @@ const InventoryView = ({ products, setProducts }: any) => {
 };
 
 /** --- CARİ HESAPLAR --- **/
-const CustomersView = ({ customers, setCustomers, invoices, transactions, setTransactions }: any) => {
+const CustomersView = ({ customers, setCustomers, invoices, transactions, setTransactions }) => {
   const [modal, setModal] = useState(false);
   const [deleteConfirmModal, setDeleteConfirmModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<any>(null);
+  const [editingId, setEditingId] = useState(null);
+  const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ name: '', phone: '', city: '', type: 'MÜŞTERİ' });
   const [search, setSearch] = useState("");
 
-  const getBalance = (name: string) => {
-    const inv = invoices.filter((i: any) => i.customer === name).reduce((a: any, b: any) => a + b.amount, 0);
-    const pay = transactions.filter((t: any) => t.desc.includes(name)).reduce((a: any, t: any) => a + (t.type === 'GELİR' ? t.amount : -t.amount), 0);
+  const getBalance = (name) => {
+    const inv = invoices.filter((i) => i.customer === name).reduce((a, b) => a + b.amount, 0);
+    const pay = transactions.filter((t) => t.desc.includes(name)).reduce((a, t) => a + (t.type === 'GELİR' ? t.amount : -t.amount), 0);
     return inv - pay;
   };
 
-  const filtered = customers.filter((c: any) => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   const save = () => {
     if(!form.name) return;
     if(editingId) {
-      setCustomers(customers.map((c: any) => c.id === editingId ? { ...form, id: editingId } : c));
+      setCustomers(customers.map((c) => c.id === editingId ? { ...form, id: editingId } : c));
       if(selected?.id === editingId) setSelected({ ...form, id: editingId });
     } else {
       setCustomers([{ ...form, id: storage.id('CARI') }, ...customers]);
@@ -315,7 +304,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
 
   const confirmDelete = () => {
     if(!selected) return;
-    const newList = customers.filter((c: any) => c.id !== selected.id);
+    const newList = customers.filter((c) => c.id !== selected.id);
     setCustomers(newList);
     setSelected(null);
     setDeleteConfirmModal(false);
@@ -335,7 +324,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-[50px] shadow-sm border h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
-           {filtered.map((c: any) => {
+           {filtered.map((c) => {
              const b = getBalance(c.name);
              return (
                <div key={c.id} onClick={() => setSelected(c)} className={`p-8 border-b cursor-pointer transition-all hover:bg-slate-50 ${selected?.id === c.id ? 'bg-blue-50 border-l-[10px] border-l-blue-600' : ''}`}>
@@ -370,13 +359,13 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
                  <h4 className="font-black text-xs uppercase text-slate-300 border-b pb-6 mb-8 tracking-[0.3em]">Hesap Ekstresi</h4>
                  <div className="space-y-4">
-                    {invoices.filter((i: any)=>i.customer === selected.name).map((inv: any)=>(
+                    {invoices.filter((i)=>i.customer === selected.name).map((inv)=>(
                        <div key={inv.id} className="flex justify-between items-center p-8 bg-slate-50 dark:bg-slate-900/50 rounded-[35px]">
                           <div><div className="text-base font-black dark:text-white uppercase tracking-tight">Satış Faturası <span className="text-blue-500">#{inv.id}</span></div><div className="text-[11px] font-bold text-slate-400 mt-1 uppercase">{inv.date}</div></div>
                           <div className="font-black text-2xl text-rose-500 tracking-tighter">+₺{inv.amount.toLocaleString()}</div>
                        </div>
                     ))}
-                    {transactions.filter((t: any)=>t.desc.includes(selected.name)).map((tx: any)=>(
+                    {transactions.filter((t)=>t.desc.includes(selected.name)).map((tx)=>(
                        <div key={tx.id} className="flex justify-between items-center p-8 bg-emerald-50 dark:bg-emerald-900/20 rounded-[35px]">
                           <div><div className="text-base font-black text-emerald-800 uppercase tracking-tight">Tahsilat / Ödeme</div><div className="text-[11px] font-bold text-emerald-600 mt-1 uppercase">{tx.date}</div></div>
                           <div className="font-black text-2xl text-emerald-600 tracking-tighter">-₺{tx.amount.toLocaleString()}</div>
@@ -385,7 +374,7 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
                  </div>
               </div>
               <div className="mt-12 grid grid-cols-2 gap-6">
-                 <button onClick={()=>{ const amount = prompt('Alınacak tutar?'); if(amount) setTransactions([{id: storage.id('TX'), desc:`Tahsilat: ${selected.name}`, amount: Number(amount), type:'GELİR', date: new Date().toLocaleDateString('tr-TR')}, ...transactions]); }} className="bg-emerald-500 text-white py-8 rounded-[35px] font-black uppercase shadow-2xl hover:bg-emerald-600 flex items-center justify-center gap-4 text-sm active:scale-95 transition-transform"><ArrowDownLeft size={24}/> Tahsilat Al</button>
+                 <button onClick={()=>{ const amount = prompt('Alınacak tahsilat tutarı?'); if(amount) setTransactions([{id: storage.id('TX'), desc:`Tahsilat: ${selected.name}`, amount: Number(amount), type:'GELİR', date: new Date().toLocaleDateString('tr-TR'), method: 'NAKİT'}, ...transactions]); }} className="bg-emerald-500 text-white py-8 rounded-[35px] font-black uppercase shadow-2xl hover:bg-emerald-600 flex items-center justify-center gap-4 text-sm active:scale-95 transition-transform"><ArrowDownLeft size={24}/> Tahsilat Al</button>
                  <button onClick={() => setDeleteConfirmModal(true)} className="bg-red-50 text-white py-8 rounded-[35px] font-black uppercase shadow-2xl hover:bg-red-600 flex items-center justify-center gap-4 text-sm active:scale-95 transition-transform"><Trash2 size={24}/> Kaydı Sil</button>
               </div>
            </div>
@@ -407,9 +396,9 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title={editingId ? "Cari Hesabı Düzenle" : "Yeni Cari Hesabı"}>
          <div className="space-y-8">
-            <Input label="Ünvan / İsim" icon={Users} value={form.name} onChange={(e: any)=>setForm({...form, name: e.target.value})} />
+            <Input label="Ünvan / İsim" icon={Users} value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} />
             <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-2">Cari Tipi</label><select value={form.type} className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900 border rounded-2xl font-bold" onChange={(e)=>setForm({...form, type: e.target.value})}><option value="MÜŞTERİ">Müşteri</option><option value="TEDARİKÇİ">Tedarikçi</option></select></div>
-            <div className="grid grid-cols-2 gap-6"><Input label="Telefon" icon={Phone} value={form.phone} onChange={(e: any)=>setForm({...form, phone: e.target.value})} /><Input label="Şehir" icon={MapPin} value={form.city} onChange={(e: any)=>setForm({...form, city: e.target.value})} /></div>
+            <div className="grid grid-cols-2 gap-6"><Input label="Telefon" icon={Phone} value={form.phone} onChange={(e)=>setForm({...form, phone: e.target.value})} /><Input label="Şehir" icon={MapPin} value={form.city} onChange={(e)=>setForm({...form, city: e.target.value})} /></div>
             <button onClick={save} className="w-full bg-slate-900 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95">{editingId ? 'Güncelle' : 'Kaydet'}</button>
          </div>
       </Modal>
@@ -418,20 +407,20 @@ const CustomersView = ({ customers, setCustomers, invoices, transactions, setTra
 };
 
 /** --- PERSONEL --- **/
-const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
+const PersonnelView = ({ employees, setEmployees, setTransactions }) => {
   const [modal, setModal] = useState(false);
   const [deleteConfirmModal, setDeleteConfirmModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedEmp, setSelectedEmp] = useState<any>(null);
+  const [editingId, setEditingId] = useState(null);
+  const [selectedEmp, setSelectedEmp] = useState(null);
   const [form, setForm] = useState({ name: '', pos: '', sal: 0 });
   const [search, setSearch] = useState("");
 
-  const filtered = employees.filter((e: any) => e.name.toLowerCase().includes(search.toLowerCase()) || e.pos.toLowerCase().includes(search.toLowerCase()));
+  const filtered = employees.filter(e => e.name.toLowerCase().includes(search.toLowerCase()) || e.pos.toLowerCase().includes(search.toLowerCase()));
 
   const save = () => {
     if(!form.name || !form.sal) return;
     if(editingId) {
-      setEmployees(employees.map((e: any) => e.id === editingId ? { ...form, id: editingId } : e));
+      setEmployees(employees.map((e) => e.id === editingId ? { ...form, id: editingId } : e));
     } else {
       setEmployees([{ ...form, id: storage.id('EMP') }, ...employees]);
     }
@@ -439,15 +428,15 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
     setEditingId(null);
   };
 
-  const paySalary = (e: any) => {
+  const paySalary = (e) => {
     if(!confirm(`${e.name} için maaş ödemesini onaylıyor musunuz?`)) return;
-    setTransactions((prev: any) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş Ödemesi: ${e.name}`, amount: Number(e.sal), type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
+    setTransactions((prev) => [{ id: 'MAAS-'+Date.now(), desc: `Maaş Ödemesi: ${e.name}`, amount: Number(e.sal), type: 'GİDER', date: new Date().toLocaleDateString('tr-TR'), method: 'HAVALE' }, ...prev]);
     alert('Maaş Ödendi ve Kasa Kaydı Oluşturuldu!');
   };
 
   const confirmDelete = () => {
     if(!selectedEmp) return;
-    setEmployees(employees.filter((x: any) => x.id !== selectedEmp.id));
+    setEmployees(employees.filter((x) => x.id !== selectedEmp.id));
     setDeleteConfirmModal(false);
     setSelectedEmp(null);
   };
@@ -465,7 +454,7 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-         {filtered.map((e: any) => (
+         {filtered.map((e) => (
             <div key={e.id} className="bg-white dark:bg-slate-800 p-10 rounded-[50px] shadow-sm border group text-center relative hover:shadow-2xl transition-all">
                <button onClick={() => { setEditingId(e.id); setForm({...e}); setModal(true); }} className="absolute top-8 right-8 p-2 text-slate-300 hover:text-blue-500"><Edit size={22}/></button>
                <div className="w-24 h-24 bg-slate-50 dark:bg-slate-700 rounded-3xl flex items-center justify-center font-black text-4xl text-slate-300 mx-auto mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all">{e.name[0]}</div>
@@ -491,9 +480,9 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Personel Kaydı">
          <div className="space-y-8">
-            <Input label="Ad Soyad" icon={Users} value={form.name} onChange={(e: any)=>setForm({...form, name: e.target.value})} />
-            <Input label="Pozisyon" icon={Briefcase} value={form.pos} onChange={(e: any)=>setForm({...form, pos: e.target.value})} />
-            <Input label="Maaş (₺)" type="number" icon={DollarSign} value={form.sal} onChange={(e: any)=>setForm({...form, sal: Number(e.target.value)})} />
+            <Input label="Ad Soyad" icon={Users} value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} />
+            <Input label="Pozisyon" icon={Briefcase} value={form.pos} onChange={(e)=>setForm({...form, pos: e.target.value})} />
+            <Input label="Maaş (₺)" type="number" icon={DollarSign} value={form.sal} onChange={(e)=>setForm({...form, sal: Number(e.target.value)})} />
             <button onClick={save} className="w-full bg-blue-600 text-white py-6 rounded-[30px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95">Kaydet</button>
          </div>
       </Modal>
@@ -502,9 +491,9 @@ const PersonnelView = ({ employees, setEmployees, setTransactions }: any) => {
 };
 
 /** --- DİĞER MODÜLLER --- **/
-const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransactions, settings }: any) => {
+const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransactions, settings }) => {
   const [search, setSearch] = useState("");
-  const filtered = invoices.filter((i: any) => i.customer.toLowerCase().includes(search.toLowerCase()));
+  const filtered = invoices.filter((i) => i.customer.toLowerCase().includes(search.toLowerCase()));
   return (
     <div className="space-y-10">
       <h1 className="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Faturalar</h1>
@@ -518,7 +507,7 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
             <tr><th className="p-10">No</th><th className="p-10">Müşteri</th><th className="p-10 text-center">Ödeme</th><th className="p-10 text-right">Toplam</th><th className="p-10 text-right">İşlem</th></tr>
           </thead>
           <tbody className="divide-y font-medium">
-            {filtered.map((i: any) => (
+            {filtered.map((i) => (
               <tr key={i.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10 font-black text-indigo-600">{i.id}</td>
                 <td className="p-10 font-black dark:text-white uppercase">{i.customer}</td>
@@ -526,7 +515,7 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
                 <td className="p-10 text-right font-black text-2xl">₺{i.amount.toLocaleString()}</td>
                 <td className="p-10 text-right flex justify-end gap-2">
                    <button onClick={()=>window.print()} className="p-4 text-slate-300 hover:text-blue-500"><Printer size={22}/></button>
-                   <button onClick={() => { if(confirm('Silinsin mi?')) setInvoices(invoices.filter((x: any)=>x.id !== i.id)) }} className="p-4 text-slate-300 hover:text-red-500"><Trash2 size={22}/></button>
+                   <button onClick={() => { if(confirm('Bu faturayı silmek istediğinize emin misiniz?')) setInvoices(invoices.filter((x)=>x.id !== i.id)) }} className="p-4 text-slate-300 hover:text-red-500"><Trash2 size={22}/></button>
                 </td>
               </tr>
             ))}
@@ -537,9 +526,9 @@ const InvoicesView = ({ invoices, setInvoices, products, setProducts, setTransac
   );
 };
 
-const TransactionsView = ({ transactions, setTransactions }: any) => {
+const TransactionsView = ({ transactions, setTransactions }) => {
   const [typeFilter, setTypeFilter] = useState("ALL");
-  const filtered = transactions.filter((t: any) => typeFilter === "ALL" || t.type === typeFilter);
+  const filtered = transactions.filter((t) => typeFilter === "ALL" || t.type === typeFilter);
   return (
     <div className="space-y-10">
       <h1 className="text-5xl font-black uppercase tracking-tighter dark:text-white">Kasa Hareketleri</h1>
@@ -554,7 +543,7 @@ const TransactionsView = ({ transactions, setTransactions }: any) => {
             <tr><th className="p-10">Tarih</th><th className="p-10">Açıklama</th><th className="p-10 text-center">Yöntem</th><th className="p-10 text-right">Tutar</th></tr>
           </thead>
           <tbody className="divide-y font-medium">
-            {filtered.map((t: any) => (
+            {filtered.map((t) => (
               <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
                 <td className="p-10 text-slate-400 font-bold">{t.date}</td>
                 <td className="p-10 font-black dark:text-white uppercase">{t.desc}</td>
@@ -569,17 +558,17 @@ const TransactionsView = ({ transactions, setTransactions }: any) => {
   );
 };
 
-const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, products, customers, invoices, transactions, employees, proposals }: any) => {
+const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, products, customers, invoices, transactions, employees, proposals }) => {
   const [form, setForm] = useState(settings);
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef(null);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
     if(file) {
       const reader = new FileReader();
-      reader.onloadend = () => { setForm({...form, logo: reader.result as string}); };
+      reader.onloadend = () => { setForm({...form, logo: reader.result}); };
       reader.readAsDataURL(file);
     }
   };
@@ -610,13 +599,13 @@ const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, produc
                 <input type="file" ref={fileRef} onChange={handleLogoUpload} className="hidden" accept="image/*" />
                 <button onClick={() => fileRef.current?.click()} className="text-xs font-black uppercase text-blue-600">Logo Seç</button>
              </div>
-             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={(e: any)=>setForm({...form, title: e.target.value})} />
+             <Input label="Firma Ünvanı" icon={Briefcase} value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} />
           </div>
           <div className="bg-white dark:bg-slate-800 p-12 rounded-[60px] shadow-sm border space-y-10">
              <h4 className="text-[11px] font-black text-orange-600 uppercase tracking-[0.4em] border-b pb-6">Şifre Değiştir</h4>
-             {/* Input components icons are now optional to fix property 'icon' missing errors */}
-             <Input label="Mevcut Şifre" type="password" value={oldPass} onChange={(e: any)=>setOldPass(e.target.value)} />
-             <Input label="Yeni Şifre" type="password" value={newPass} onChange={(e: any)=>setNewPass(e.target.value)} />
+             {/* Fix: Added missing icons to Input calls */}
+             <Input label="Mevcut Şifre" type="password" icon={Lock} value={oldPass} onChange={(e)=>setOldPass(e.target.value)} />
+             <Input label="Yeni Şifre" type="password" icon={Lock} value={newPass} onChange={(e)=>setNewPass(e.target.value)} />
              <div className="pt-10 border-t grid grid-cols-2 gap-6">
                 <button onClick={()=>{
                   const blob = new Blob([JSON.stringify({products, customers, invoices, transactions, employees, proposals, settings}, null, 2)], {type:'application/json'});
@@ -631,9 +620,10 @@ const SettingsView = ({ settings, setSettings, systemPass, setSystemPass, produc
   );
 };
 
-const ProposalsView = () => <div className="p-20 text-center text-slate-300 font-black uppercase">Teklifler Modülü Gelecek Güncellemede...</div>;
-const ReportsView = () => <div className="p-20 text-center text-slate-300 font-black uppercase">Raporlar Modülü Gelecek Güncellemede...</div>;
-const AIView = () => <div className="p-20 text-center text-slate-300 font-black uppercase">AI Asistan Modülü Gelecek Güncellemede...</div>;
+/* Fix: Updated placeholder components to accept props, resolving 'proposals' does not exist error */
+const ProposalsView = (_props: any) => <div className="p-20 text-center text-slate-300 font-black uppercase">Teklifler Modülü Gelecek Güncellemede...</div>;
+const ReportsView = (_props: any) => <div className="p-20 text-center text-slate-300 font-black uppercase">Raporlar Modülü Gelecek Güncellemede...</div>;
+const AIView = (_props: any) => <div className="p-20 text-center text-slate-300 font-black uppercase">AI Asistan Modülü Gelecek Güncellemede...</div>;
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
